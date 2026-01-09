@@ -1,0 +1,452 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - Estudo de Expressões Faciais{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Cabeçalho do Dashboard -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0">Dashboard do Estudo</h1>
+        <div>
+            <a href="{% url 'faceStudy:upload_image' %}" class="btn btn-primary">
+                <i class="fas fa-upload"></i> Upload de Imagens
+            </a>
+            <a href="{% url 'faceStudy:study_config' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-cog"></i> Configurações
+            </a>
+        </div>
+    </div>
+
+    <!-- Cards de Estatísticas -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-primary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                Total de Imagens
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.total_images }}</div>
+                            <small class="text-muted">{{ stats.rated_images }} avaliadas</small>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-images fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-success shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                Participantes
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.total_participants }}</div>
+                            <small class="text-muted">{{ stats.total_ratings }} avaliações</small>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-users fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-info shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                Estados Emocionais
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.emotional_states }}</div>
+                            <small class="text-muted">Configurados</small>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-smile fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-warning shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                Taxa de Resposta
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                {% if stats.total_images > 0 %}
+                                    {{ stats.rated_images|floatformat:0 }}/{{ stats.total_images }}
+                                {% else %}
+                                    0
+                                {% endif %}
+                            </div>
+                            <div class="progress mt-2">
+                                <div class="progress-bar bg-warning" role="progressbar" 
+                                     style="width: {% if stats.total_images > 0 %}{{ stats.rated_images|floatformat:0 }}{% else %}0{% endif %}%">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-chart-line fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Seção Principal com Duas Colunas -->
+    <div class="row">
+        <!-- Coluna da Esquerda: Ações Rápidas e Links -->
+        <div class="col-lg-4 mb-4">
+            <!-- Card de Ações Rápidas -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Ações Rápidas</h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'faceStudy:start_session' %}" class="btn btn-success btn-block">
+                            <i class="fas fa-play-circle"></i> Iniciar Nova Sessão
+                        </a>
+                        <a href="{% url 'faceStudy:manage_emotional_states' %}" class="btn btn-info btn-block">
+                            <i class="fas fa-smile"></i> Gerenciar Estados Emocionais
+                        </a>
+                        <a href="{% url 'faceStudy:study_config' %}" class="btn btn-outline-secondary btn-block">
+                            <i class="fas fa-sliders-h"></i> Configurar Estudo
+                        </a>
+                        <button type="button" class="btn btn-outline-primary btn-block" data-bs-toggle="modal" data-bs-target="#urlModal">
+                            <i class="fas fa-link"></i> Ver URL do Estudo
+                        </button>
+                    </div>
+                    
+                    <!-- Estatísticas Adicionais -->
+                    <div class="mt-4">
+                        <h6 class="font-weight-bold">Informações do Estudo</h6>
+                        <ul class="list-group list-group-flush">
+                            <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                Imagens Pendentes
+                                <span class="badge bg-warning rounded-pill">
+                                    {{ stats.total_images|add:"-"|add:stats.rated_images }}
+                                </span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                Média por Participante
+                                <span>
+                                    {% if stats.total_participants > 0 %}
+                                        {{ stats.total_ratings|floatformat:1|default:"0" }}
+                                    {% else %}
+                                        0
+                                    {% endif %}
+                                </span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                Taxa de Conclusão
+                                <span>
+                                    {% if stats.total_images > 0 %}
+                                        {{ stats.rated_images|floatformat:0 }}%
+                                    {% else %}
+                                        0%
+                                    {% endif %}
+                                </span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card de Status do Sistema -->
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Status do Sistema</h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <h6 class="font-weight-bold">Banco de Dados</h6>
+                        <div class="progress mb-2">
+                            <div class="progress-bar bg-success" role="progressbar" style="width: 75%">
+                                Operacional
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <h6 class="font-weight-bold">Armazenamento</h6>
+                        <small class="text-muted">Verifique o espaço disponível para imagens</small>
+                    </div>
+                    <div>
+                        <h6 class="font-weight-bold">Última Atualização</h6>
+                        <small class="text-muted">{% now "d/m/Y H:i" %}</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Coluna da Direita: Avaliações Recentes -->
+        <div class="col-lg-8">
+            <!-- Card de Avaliações Recentes -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="m-0 font-weight-bold text-primary">Avaliações Recentes</h6>
+                    <a href="#" class="btn btn-sm btn-outline-primary">Ver Todas</a>
+                </div>
+                <div class="card-body">
+                    {% if recent_ratings %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Participante</th>
+                                    <th>Imagem</th>
+                                    <th>Data/Hora</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for rating in recent_ratings %}
+                                <tr>
+                                    <td>
+                                        <i class="fas fa-user-circle me-2"></i>
+                                        {{ rating.participant.email|truncatechars:20 }}
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-secondary">{{ rating.image.code }}</span>
+                                    </td>
+                                    <td>{{ rating.created_at|date:"d/m/Y H:i" }}</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-info" 
+                                                data-bs-toggle="tooltip" 
+                                                title="Ver detalhes">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" 
+                                                data-bs-toggle="tooltip" 
+                                                title="Excluir avaliação">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-clipboard-list fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">Nenhuma avaliação registrada ainda.</p>
+                        <a href="{% url 'faceStudy:start_session' %}" class="btn btn-primary">
+                            <i class="fas fa-play"></i> Iniciar Primeira Sessão
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Card de Atividade Recente -->
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Atividade do Sistema</h6>
+                </div>
+                <div class="card-body">
+                    <div class="timeline">
+                        {% if recent_ratings %}
+                            {% for rating in recent_ratings|slice:":5" %}
+                            <div class="timeline-item mb-3">
+                                <div class="timeline-marker bg-primary"></div>
+                                <div class="timeline-content">
+                                    <h6 class="mb-1">
+                                        <strong>{{ rating.participant.email|truncatechars:25 }}</strong>
+                                        avaliou a imagem {{ rating.image.code }}
+                                    </h6>
+                                    <small class="text-muted">
+                                        <i class="far fa-clock"></i> 
+                                        {{ rating.created_at|timesince }} atrás
+                                    </small>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="text-center py-3">
+                                <i class="fas fa-history fa-2x text-muted mb-2"></i>
+                                <p class="text-muted">Nenhuma atividade recente</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para URL do Estudo -->
+<div class="modal fade" id="urlModal" tabindex="-1" aria-labelledby="urlModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="urlModalLabel">URL do Estudo para Participantes</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Compartilhe este link com os participantes:</p>
+                <div class="input-group mb-3">
+                    <input type="text" class="form-control" id="studyUrl" 
+                           value="{{ request.scheme }}://{{ request.get_host }}{% url 'faceStudy:start_session' %}"
+                           readonly>
+                    <button class="btn btn-outline-secondary" type="button" id="copyUrlBtn">
+                        <i class="fas fa-copy"></i>
+                    </button>
+                </div>
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i>
+                    <small>
+                        Os participantes acessarão esta URL, informarão seu e-mail 
+                        e começarão a classificar as imagens.
+                    </small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Estatísticas Detalhadas -->
+<div class="modal fade" id="statsModal" tabindex="-1" aria-labelledby="statsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="statsModalLabel">Estatísticas Detalhadas</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Conteúdo das estatísticas detalhadas será carregado via AJAX -->
+                <div id="detailedStatsContent">
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Carregando...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Inicializar tooltips do Bootstrap
+document.addEventListener('DOMContentLoaded', function() {
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+    })
+    
+    // Copiar URL do estudo
+    document.getElementById('copyUrlBtn').addEventListener('click', function() {
+        var urlInput = document.getElementById('studyUrl');
+        urlInput.select();
+        urlInput.setSelectionRange(0, 99999); // Para dispositivos móveis
+        document.execCommand('copy');
+        
+        // Feedback visual
+        var originalText = this.innerHTML;
+        this.innerHTML = '<i class="fas fa-check"></i> Copiado!';
+        this.classList.remove('btn-outline-secondary');
+        this.classList.add('btn-success');
+        
+        setTimeout(() => {
+            this.innerHTML = originalText;
+            this.classList.remove('btn-success');
+            this.classList.add('btn-outline-secondary');
+        }, 2000);
+    });
+    
+    // Atualizar dashboard a cada 30 segundos (opcional)
+    // setInterval(function() {
+    //     location.reload();
+    // }, 30000);
+});
+</script>
+
+<style>
+/* Estilos para a linha do tempo */
+.timeline {
+    position: relative;
+    padding-left: 30px;
+}
+
+.timeline-item {
+    position: relative;
+    padding-bottom: 10px;
+}
+
+.timeline-marker {
+    position: absolute;
+    left: -30px;
+    top: 0;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background-color: #4e73df;
+}
+
+.timeline-content {
+    padding-left: 10px;
+}
+
+/* Estilos para os cards */
+.card {
+    border: none;
+    border-radius: 10px;
+}
+
+.border-left-primary {
+    border-left: .25rem solid #4e73df!important;
+}
+
+.border-left-success {
+    border-left: .25rem solid #1cc88a!important;
+}
+
+.border-left-info {
+    border-left: .25rem solid #36b9cc!important;
+}
+
+.border-left-warning {
+    border-left: .25rem solid #f6c23e!important;
+}
+
+/* Animações */
+.progress-bar {
+    transition: width 0.6s ease;
+}
+
+.fa-2x {
+    opacity: 0.7;
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    .d-flex.justify-content-between {
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .btn-block {
+        width: 100%;
+    }
+}
+</style>
+{% endblock %}

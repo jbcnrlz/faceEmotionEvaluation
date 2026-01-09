@@ -1,0 +1,472 @@
+{% extends 'base.html' %}
+
+{% block title %}Start Study Session{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- Header -->
+            <div class="text-center mb-5">
+                <div class="mb-4">
+                    <i class="fas fa-smile-beam fa-4x text-primary"></i>
+                </div>
+                <h1 class="h2 mb-3">Facial Expression Recognition Study</h1>
+                <p class="lead text-muted">
+                    Participate in our research by classifying facial expressions
+                </p>
+            </div>
+
+            <!-- Main Card -->
+            <div class="card shadow-lg border-0">
+                <div class="card-body p-5">
+                    <!-- Progress (step 1 of 2) -->
+                    <div class="mb-5">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6 class="mb-0">Session Start</h6>
+                            <span class="badge bg-primary">Step 1 of 2</span>
+                        </div>
+                        <div class="progress" style="height: 8px;">
+                            <div class="progress-bar" role="progressbar" style="width: 50%" 
+                                 aria-valuenow="50" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                    </div>
+
+                    <!-- Email Form -->
+                    <form method="post" class="needs-validation" novalidate>
+                        {% csrf_token %}
+                        
+                        <div class="mb-4">
+                            <h4 class="mb-3">Participant Identification</h4>
+                            <p class="text-muted">
+                                To ensure each participant classifies only once, 
+                                we use your email as a unique identifier.
+                            </p>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="{{ form.email.id_for_label }}" class="form-label fw-bold">
+                                <i class="fas fa-envelope me-2"></i>Your Email
+                            </label>
+                            
+                            {{ form.email }}
+                            
+                            {% if form.email.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.email.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            
+                            <div class="form-text">
+                                We will not share your email. It will only be used for participation control.
+                            </div>
+                        </div>
+
+                        <!-- Terms and Conditions -->
+                        <div class="mb-4">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="termsCheck" required>
+                                <label class="form-check-label" for="termsCheck">
+                                    I agree to participate in this study voluntarily
+                                </label>
+                                <div class="invalid-feedback">
+                                    You must agree to continue.
+                                </div>
+                            </div>
+                            
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="dataCheck" required>
+                                <label class="form-check-label" for="dataCheck">
+                                    I authorize the use of collected data for scientific research purposes
+                                </label>
+                                <div class="invalid-feedback">
+                                    You must authorize data usage.
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Study Information -->
+                        <div class="accordion mb-4" id="studyInfoAccordion">
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="headingOne">
+                                    <button class="accordion-button collapsed" type="button" 
+                                            data-bs-toggle="collapse" data-bs-target="#collapseOne" 
+                                            aria-expanded="false" aria-controls="collapseOne">
+                                        <i class="fas fa-info-circle me-2"></i> How does the study work?
+                                    </button>
+                                </h2>
+                                <div id="collapseOne" class="accordion-collapse collapse" 
+                                     aria-labelledby="headingOne" data-bs-parent="#studyInfoAccordion">
+                                    <div class="accordion-body">
+                                        <ol class="mb-0">
+                                            <li class="mb-2">
+                                                <strong>Image classification:</strong> You will see a series of images with facial expressions.
+                                            </li>
+                                            <li class="mb-2">
+                                                <strong>Emotion ranking:</strong> For each image, you must rank the emotional states 
+                                                from most consistent (1) to least consistent.
+                                            </li>
+                                            <li class="mb-2">
+                                                <strong>Duration:</strong> The session will have approximately 
+                                                {% with config=study_config %}
+                                                    {{ config.images_per_session }} images
+                                                {% endwith %}.
+                                            </li>
+                                            <li>
+                                                <strong>Estimated time:</strong> 10-15 minutes.
+                                            </li>
+                                        </ol>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="headingTwo">
+                                    <button class="accordion-button collapsed" type="button" 
+                                            data-bs-toggle="collapse" data-bs-target="#collapseTwo" 
+                                            aria-expanded="false" aria-controls="collapseTwo">
+                                        <i class="fas fa-question-circle me-2"></i> Frequently Asked Questions
+                                    </button>
+                                </h2>
+                                <div id="collapseTwo" class="accordion-collapse collapse" 
+                                     aria-labelledby="headingTwo" data-bs-parent="#studyInfoAccordion">
+                                    <div class="accordion-body">
+                                        <div class="mb-3">
+                                            <h6>Can I participate more than once?</h6>
+                                            <p class="mb-0 text-muted">
+                                                No. Each participant can only classify a unique set of images.
+                                                If you have participated before, you cannot start a new session.
+                                            </p>
+                                        </div>
+                                        <div class="mb-3">
+                                            <h6>Can I pause and continue later?</h6>
+                                            <p class="mb-0 text-muted">
+                                                Yes. Your session will be saved and you can continue from where you left off, 
+                                                as long as you use the same email.
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <h6>How is the data used?</h6>
+                                            <p class="mb-0 text-muted">
+                                                Data is used only for scientific research on 
+                                                facial expression recognition. All information is anonymized.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-between">
+                            <a href="{% url 'faceStudy:dashboard' %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-arrow-left me-1"></i> Back
+                            </a>
+                            
+                            <button type="submit" class="btn btn-primary btn-lg px-5">
+                                <i class="fas fa-play me-2"></i> Start Session
+                            </button>
+                        </div>
+                    </form>
+
+                    <!-- Support Information -->
+                    <div class="mt-5 pt-4 border-top text-center">
+                        <p class="text-muted small">
+                            For questions, please contact: 
+                            <a href="mailto:joao.cardia@fatec.sp.gov.br">joao.cardia@fatec.sp.gov.br</a>
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Informational Footer -->
+            <div class="mt-4">
+                <div class="row text-center">
+                    <div class="col-md-4 mb-3">
+                        <div class="card border-0 bg-light">
+                            <div class="card-body">
+                                <i class="fas fa-clock fa-2x text-primary mb-3"></i>
+                                <h6>Short Duration</h6>
+                                <p class="small text-muted mb-0">Only a few minutes</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <div class="card border-0 bg-light">
+                            <div class="card-body">
+                                <i class="fas fa-user-shield fa-2x text-primary mb-3"></i>
+                                <h6>Confidential</h6>
+                                <p class="small text-muted mb-0">Your data is protected</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <div class="card border-0 bg-light">
+                            <div class="card-body">
+                                <i class="fas fa-graduation-cap fa-2x text-primary mb-3"></i>
+                                <h6>Scientific Purposes</h6>
+                                <p class="small text-muted mb-0">Contribute to science</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal for Existing Participant -->
+{% if messages %}
+    {% for message in messages %}
+        {% if 'already participated' in message.message|lower or 'já participou' in message.message|lower %}
+        <div class="modal fade show" id="existingParticipantModal" tabindex="-1" 
+             aria-labelledby="existingParticipantModalLabel" aria-modal="true" style="display: block; background-color: rgba(0,0,0,0.5);">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header bg-warning text-dark">
+                        <h5 class="modal-title" id="existingParticipantModalLabel">
+                            <i class="fas fa-exclamation-triangle me-2"></i> Participation Already Registered
+                        </h5>
+                        <button type="button" class="btn-close" onclick="closeModal()"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>The provided email is already registered in our system.</p>
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Each participant can only classify a unique set of images 
+                            to ensure the statistical validity of the study.
+                        </div>
+                        <p class="mb-0">
+                            If you believe this is an error, please contact the researchers.
+                        </p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" onclick="closeModal()">I Understand</button>
+                        <a href="mailto:research@example.com" class="btn btn-primary">
+                            <i class="fas fa-envelope me-1"></i> Contact Researchers
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    {% endfor %}
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Form validation
+    const form = document.querySelector('.needs-validation');
+    const emailInput = document.getElementById('{{ form.email.id_for_label }}');
+    
+    // Add Bootstrap classes to email field
+    if (emailInput) {
+        emailInput.classList.add('form-control', 'form-control-lg');
+        emailInput.placeholder = 'your@email.com';
+    }
+    
+    // Custom validation
+    form.addEventListener('submit', function(event) {
+        if (!form.checkValidity()) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+        
+        form.classList.add('was-validated');
+        
+        // Additional email validation
+        if (emailInput.value) {
+            const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailPattern.test(emailInput.value)) {
+                emailInput.classList.add('is-invalid');
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'invalid-feedback';
+                errorDiv.textContent = 'Please enter a valid email address.';
+                emailInput.parentNode.appendChild(errorDiv);
+                event.preventDefault();
+            }
+        }
+    });
+    
+    // Close existing participant modal
+    window.closeModal = function() {
+        const modal = document.getElementById('existingParticipantModal');
+        if (modal) {
+            modal.style.display = 'none';
+            modal.classList.remove('show');
+        }
+    }
+    
+    // Add real-time validation
+    emailInput.addEventListener('input', function() {
+        this.classList.remove('is-invalid');
+        const errorDiv = this.parentNode.querySelector('.invalid-feedback');
+        if (errorDiv && !errorDiv.classList.contains('d-block')) {
+            errorDiv.remove();
+        }
+    });
+    
+    // Auto-focus email field
+    emailInput.focus();
+    
+    // Show modal automatically if there's an error message
+    {% if messages %}
+        {% for message in messages %}
+            {% if 'already participated' in message.message|lower or 'já participou' in message.message|lower %}
+                const modal = new bootstrap.Modal(document.getElementById('existingParticipantModal'));
+                modal.show();
+            {% endif %}
+        {% endfor %}
+    {% endif %}
+});
+
+// Close modal on ESC key
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') {
+        window.closeModal();
+    }
+});
+
+// Prevent modal closing when clicking outside
+document.addEventListener('click', function(event) {
+    const modal = document.getElementById('existingParticipantModal');
+    if (modal && event.target === modal) {
+        event.stopPropagation();
+    }
+});
+</script>
+
+<style>
+/* Custom styles */
+.card {
+    border-radius: 20px;
+    overflow: hidden;
+}
+
+.card-body {
+    border-radius: 20px;
+}
+
+.form-control-lg {
+    padding: 1rem 1.5rem;
+    font-size: 1.1rem;
+    border-radius: 10px;
+    border: 2px solid #e0e0e0;
+    transition: all 0.3s ease;
+}
+
+.form-control-lg:focus {
+    border-color: #4e73df;
+    box-shadow: 0 0 0 0.25rem rgba(78, 115, 223, 0.25);
+}
+
+.btn-lg {
+    padding: 0.75rem 2rem;
+    border-radius: 10px;
+    font-weight: 600;
+}
+
+.progress {
+    border-radius: 10px;
+    overflow: hidden;
+    background-color: #e9ecef;
+}
+
+.progress-bar {
+    background: linear-gradient(90deg, #4e73df, #1cc88a);
+    border-radius: 10px;
+}
+
+.accordion-button {
+    border-radius: 10px !important;
+    padding: 1rem 1.5rem;
+    font-weight: 600;
+    background-color: #f8f9fa;
+    border: 1px solid #e0e0e0;
+}
+
+.accordion-button:not(.collapsed) {
+    background-color: #e3f2fd;
+    color: #0d6efd;
+}
+
+.accordion-body {
+    padding: 1.5rem;
+}
+
+.badge {
+    padding: 0.5em 1em;
+    border-radius: 20px;
+    font-weight: 500;
+}
+
+.modal-content {
+    border-radius: 15px;
+    overflow: hidden;
+}
+
+/* Smooth animations */
+.accordion-button::after {
+    transition: transform 0.3s ease;
+}
+
+.form-control {
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Responsiveness */
+@media (max-width: 768px) {
+    .card-body {
+        padding: 2rem !important;
+    }
+    
+    .btn-lg {
+        width: 100%;
+        margin-bottom: 1rem;
+    }
+    
+    .d-md-flex {
+        flex-direction: column;
+    }
+}
+
+/* Error message styles */
+.invalid-feedback {
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+}
+
+.is-invalid {
+    border-color: #dc3545 !important;
+}
+
+.is-invalid:focus {
+    box-shadow: 0 0 0 0.25rem rgba(220, 53, 69, 0.25) !important;
+}
+
+/* Modal overlay */
+.modal-backdrop.show {
+    opacity: 0.5;
+}
+
+/* Existing participant modal styles */
+#existingParticipantModal .modal-content {
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateY(-50px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+</style>
+{% endblock %}
