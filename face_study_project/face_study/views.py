@@ -121,7 +121,7 @@ def rate_images(request):
                 request.session['session_active'] = False
                 return redirect('faceStudy:session_complete')
             
-            return redirect('facetudy:rate_images')
+            return redirect('faceStudy:rate_images')
     
     # Pega as imagens já avaliadas nesta sessão
     rated_ids = request.session.get('rated_images', [])
