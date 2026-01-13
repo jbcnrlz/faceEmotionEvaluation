@@ -24,16 +24,44 @@ class FaceImage(models.Model):
     image = models.ImageField(upload_to=image_upload_path)
     code = models.CharField(max_length=20, unique=True, editable=False)
     uploaded_at = models.DateTimeField(auto_now_add=True)
-    is_rated = models.BooleanField(default=False)
     
     def save(self, *args, **kwargs):
         if not self.code:
             self.code = f"IMG-{uuid.uuid4().hex[:8].upper()}"
         super().save(*args, **kwargs)
     
+    def rating_count(self):
+        """Retorna quantas vezes esta imagem foi avaliada"""
+        return self.ratings.count()
+    
+    def is_available_for_rating(self, config=None):
+        """Verifica se a imagem está disponível para avaliação"""
+        if not config:
+            config = StudyConfiguration.objects.filter(is_active=True).first()
+            if not config:
+                config = StudyConfiguration.objects.create()
+        
+        return self.ratings.count() < config.max_ratings_per_image
+    
+    def get_availability_status(self):
+        """Retorna status de disponibilidade para o admin"""
+        config = StudyConfiguration.objects.filter(is_active=True).first()
+        if not config:
+            config = StudyConfiguration.objects.create()
+        
+        count = self.rating_count()
+        max_allowed = config.max_ratings_per_image
+        
+        if count >= max_allowed:
+            return f"FULL ({count}/{max_allowed})"
+        elif count > 0:
+            return f"PARTIAL ({count}/{max_allowed})"
+        else:
+            return f"EMPTY (0/{max_allowed})"
+    
     def __str__(self):
         return f"{self.code} - {self.image.name}"
-
+    
 class Participant(models.Model):
     email = models.EmailField(unique=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -68,9 +96,21 @@ class EmotionRanking(models.Model):
         return f"Rank {self.rank}: {self.emotion.name}"
 
 class StudyConfiguration(models.Model):
-    images_per_session = models.IntegerField(
+    min_images_per_session = models.IntegerField(
+        default=1,
+        validators=[MinValueValidator(1), MaxValueValidator(50)],
+        verbose_name="Minimum images per session"
+    )
+    max_images_per_session = models.IntegerField(
         default=10,
-        validators=[MinValueValidator(1), MaxValueValidator(50)]
+        validators=[MinValueValidator(1), MaxValueValidator(50)],
+        verbose_name="Maximum images per session"
+    )
+    max_ratings_per_image = models.IntegerField(
+        default=1,
+        validators=[MinValueValidator(1), MaxValueValidator(100)],
+        verbose_name="Maximum ratings per image",
+        help_text="Maximum number of times an image can be rated"
     )
     created_at = models.DateTimeField(auto_now_add=True)
     is_active = models.BooleanField(default=True)
@@ -79,7 +119,12 @@ class StudyConfiguration(models.Model):
         # Garante que apenas uma configuração esteja ativa
         if self.is_active:
             StudyConfiguration.objects.filter(is_active=True).update(is_active=False)
+        
+        # Valida que min <= max
+        if self.min_images_per_session > self.max_images_per_session:
+            self.min_images_per_session = self.max_images_per_session
+        
         super().save(*args, **kwargs)
     
     def __str__(self):
-        return f"Config: {self.images_per_session} imagens/sessão"
+        return f"Config: {self.min_images_per_session}-{self.max_images_per_session} images, max {self.max_ratings_per_image} ratings/image"

@@ -43,14 +43,36 @@ class EmotionRankingForm(forms.Form):
 class StudyConfigForm(forms.ModelForm):
     class Meta:
         model = StudyConfiguration
-        fields = ['images_per_session', 'is_active']
+        fields = ['min_images_per_session', 'max_images_per_session', 'max_ratings_per_image', 'is_active']
         widgets = {
-            'images_per_session': forms.NumberInput(attrs={
+            'min_images_per_session': forms.NumberInput(attrs={
                 'class': 'form-control',
                 'min': 1,
                 'max': 50
+            }),
+            'max_images_per_session': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'min': 1,
+                'max': 50
+            }),
+            'max_ratings_per_image': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'min': 1,
+                'max': 100
             }),
             'is_active': forms.CheckboxInput(attrs={
                 'class': 'form-check-input'
             })
         }
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        min_images = cleaned_data.get('min_images_per_session')
+        max_images = cleaned_data.get('max_images_per_session')
+        
+        if min_images and max_images and min_images > max_images:
+            raise forms.ValidationError(
+                "Minimum images per session cannot be greater than maximum."
+            )
+        
+        return cleaned_data

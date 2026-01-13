@@ -1,0 +1,433 @@
+{% extends 'base.html' %}
+
+{% block title %}Session Complete - Facial Expression Study{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- Header -->
+            <div class="text-center mb-5">
+                <div class="mb-4">
+                    <i class="fas fa-check-circle fa-5x text-success"></i>
+                </div>
+                <h1 class="h2 mb-3">Session Complete!</h1>
+                <p class="lead text-muted">
+                    Thank you for participating in our facial expression study
+                </p>
+            </div>
+
+            <!-- Main Card -->
+            <div class="card shadow-lg border-0">
+                <div class="card-body p-5">
+                    <!-- Session Summary -->
+                    <div class="text-center mb-5">
+                        <div class="mb-4">
+                            <div class="display-4 text-primary mb-2">
+                                <i class="fas fa-trophy"></i>
+                            </div>
+                            <h3 class="h4 mb-3">Your Contribution is Valuable</h3>
+                            <p class="text-muted">
+                                You have successfully completed the facial expression classification session.
+                                Your responses have been recorded and will contribute to our research.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- What Happens Next -->
+                    <div class="row mb-5">
+                        <div class="col-md-4 mb-4">
+                            <div class="text-center">
+                                <div class="mb-3">
+                                    <i class="fas fa-database fa-3x text-primary"></i>
+                                </div>
+                                <h5 class="h6 mb-2">Data Analysis</h5>
+                                <p class="small text-muted">
+                                    Your anonymous responses will be analyzed alongside other participants' data.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-4">
+                            <div class="text-center">
+                                <div class="mb-3">
+                                    <i class="fas fa-chart-line fa-3x text-primary"></i>
+                                </div>
+                                <h5 class="h6 mb-2">Research Insights</h5>
+                                <p class="small text-muted">
+                                    The results will help advance understanding of facial expression recognition.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-4">
+                            <div class="text-center">
+                                <div class="mb-3">
+                                    <i class="fas fa-graduation-cap fa-3x text-primary"></i>
+                                </div>
+                                <h5 class="h6 mb-2">Scientific Contribution</h5>
+                                <p class="small text-muted">
+                                    Your participation contributes to scientific knowledge in psychology and AI.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Important Information -->
+                    <div class="alert alert-info mb-4">
+                        <div class="d-flex">
+                            <div class="me-3">
+                                <i class="fas fa-info-circle fa-2x"></i>
+                            </div>
+                            <div>
+                                <h5 class="alert-heading">Important Information</h5>
+                                <p class="mb-2">
+                                    Each participant can only complete one session to ensure data validity. 
+                                    If you'd like to participate again, please use a different email address.
+                                </p>
+                                <p class="mb-0">
+                                    All data is anonymized and used exclusively for scientific research purposes.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="d-grid gap-3 d-md-flex justify-content-md-center mt-5">
+                        <a href="{% url 'faceStudy:start_session' %}" class="btn btn-outline-primary btn-lg px-5">
+                            <i class="fas fa-home me-2"></i> Return to Home
+                        </a>
+                        
+                        <button type="button" class="btn btn-outline-secondary btn-lg px-5" onclick="shareStudy()">
+                            <i class="fas fa-share-alt me-2"></i> Share Study
+                        </button>
+                    </div>
+
+                    <!-- Study Information -->
+                    <div class="mt-5 pt-4 border-top">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6 class="mb-3">
+                                    <i class="fas fa-question-circle me-2"></i> Frequently Asked Questions
+                                </h6>
+                                <div class="accordion accordion-flush" id="faqAccordion">
+                                    <div class="accordion-item">
+                                        <h2 class="accordion-header" id="faqOne">
+                                            <button class="accordion-button collapsed" type="button" 
+                                                    data-bs-toggle="collapse" data-bs-target="#collapseFaqOne">
+                                                Can I see my results?
+                                            </button>
+                                        </h2>
+                                        <div id="collapseFaqOne" class="accordion-collapse collapse">
+                                            <div class="accordion-body">
+                                                <small class="text-muted">
+                                                    Individual results are not available as this is a research study 
+                                                    focused on aggregate data analysis.
+                                                </small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="accordion-item">
+                                        <h2 class="accordion-header" id="faqTwo">
+                                            <button class="accordion-button collapsed" type="button" 
+                                                    data-bs-toggle="collapse" data-bs-target="#collapseFaqTwo">
+                                                How is my data protected?
+                                            </button>
+                                        </h2>
+                                        <div id="collapseFaqTwo" class="accordion-collapse collapse">
+                                            <div class="accordion-body">
+                                                <small class="text-muted">
+                                                    All data is anonymized and stored securely in compliance with 
+                                                    data protection regulations. Your email is used only for 
+                                                    participation control and is not shared with third parties.
+                                                </small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <h6 class="mb-3">
+                                    <i class="fas fa-envelope me-2"></i> Contact Information
+                                </h6>
+                                <div class="card bg-light">
+                                    <div class="card-body">
+                                        <p class="small text-muted mb-2">
+                                            For questions about this study or to request removal of your data:
+                                        </p>
+                                        <p class="mb-0">
+                                            <i class="fas fa-envelope me-2"></i>
+                                            <a href="mailto:research@example.com">research@example.com</a>
+                                        </p>
+                                        <p class="small text-muted mt-2">
+                                            Please include your participation email address in your message.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Set current date for certificate
+    const now = new Date();
+    const formattedDate = now.toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+    });
+    document.getElementById('certificateDate').textContent = formattedDate;
+    
+    // Try to get participant email from session storage or cookies
+    const participantEmail = getParticipantEmail();
+    if (participantEmail) {
+        document.getElementById('participantEmail').textContent = participantEmail;
+    }
+});
+
+function generateCertificate() {
+    const modal = new bootstrap.Modal(document.getElementById('certificateModal'));
+    modal.show();
+}
+
+function printCertificate() {
+    const certificateContent = document.querySelector('.certificate-container').cloneNode(true);
+    
+    // Create print window
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+        <html>
+            <head>
+                <title>Certificate of Participation</title>
+                <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+                <style>
+                    body { 
+                        font-family: Arial, sans-serif; 
+                        margin: 40px; 
+                        background-color: white;
+                    }
+                    .certificate-container { 
+                        border: 2px solid #000; 
+                        padding: 50px; 
+                        text-align: center;
+                        background-color: #f8f9fa;
+                        max-width: 800px;
+                        margin: 0 auto;
+                    }
+                    h2 { 
+                        font-family: 'Times New Roman', serif; 
+                        color: #2c3e50; 
+                        margin-bottom: 30px;
+                    }
+                    h3 { 
+                        font-family: 'Cursive', cursive; 
+                        color: #2980b9; 
+                        margin: 20px 0;
+                        border-bottom: 2px solid #3498db;
+                        display: inline-block;
+                        padding-bottom: 10px;
+                    }
+                    h4 { 
+                        color: #2c3e50; 
+                        margin: 20px 0;
+                    }
+                    .fa-certificate { 
+                        color: #f39c12; 
+                        margin-bottom: 20px;
+                    }
+                    @media print {
+                        body { margin: 0; }
+                        .no-print { display: none; }
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="certificate-container">
+                    ${certificateContent.innerHTML}
+                </div>
+                <div class="no-print text-center mt-4">
+                    <button onclick="window.print()" class="btn btn-primary">
+                        <i class="fas fa-print me-2"></i> Print Certificate
+                    </button>
+                    <button onclick="window.close()" class="btn btn-secondary ms-2">
+                        <i class="fas fa-times me-2"></i> Close
+                    </button>
+                </div>
+                <script>
+                    window.onload = function() {
+                        // Auto-print option (optional)
+                        // window.print();
+                    };
+                <\/script>
+            </body>
+        </html>
+    `);
+    printWindow.document.close();
+}
+
+function shareStudy() {
+    const studyUrl = window.location.origin + '{% url "faceStudy:start_session" %}';
+    const studyTitle = 'Facial Expression Recognition Study';
+    const studyDescription = 'Participate in this scientific study on facial expression recognition!';
+    
+    if (navigator.share) {
+        // Use Web Share API if available
+        navigator.share({
+            title: studyTitle,
+            text: studyDescription,
+            url: studyUrl,
+        })
+        .then(() => console.log('Study shared successfully'))
+        .catch((error) => console.log('Error sharing:', error));
+    } else {
+        // Fallback: copy to clipboard
+        const textToCopy = `${studyTitle}\n\n${studyDescription}\n\n${studyUrl}`;
+        
+        navigator.clipboard.writeText(textToCopy)
+            .then(() => {
+                alert('Study link copied to clipboard! You can now share it.');
+            })
+            .catch((error) => {
+                console.error('Error copying to clipboard:', error);
+                // Fallback to prompt
+                prompt('Copy this link to share:', studyUrl);
+            });
+    }
+}
+
+function getParticipantEmail() {
+    // Try to get email from various sources
+    // This is a simplified version - you might want to pass it from the view
+    try {
+        // Check if we have it in a data attribute or from the backend
+        const emailElement = document.querySelector('[data-participant-email]');
+        if (emailElement) {
+            return emailElement.dataset.participantEmail;
+        }
+        
+        // Check sessionStorage
+        const storedEmail = sessionStorage.getItem('participantEmail');
+        if (storedEmail) {
+            return storedEmail;
+        }
+        
+        return 'Participant';
+    } catch (error) {
+        console.log('Could not retrieve participant email:', error);
+        return 'Participant';
+    }
+}
+
+// Optional: Auto-scroll animation for thank you message
+function animateThankYou() {
+    const thankYouElement = document.querySelector('.display-4');
+    if (thankYouElement) {
+        thankYouElement.style.transform = 'scale(1.1)';
+        thankYouElement.style.transition = 'transform 0.5s ease';
+        
+        setTimeout(() => {
+            thankYouElement.style.transform = 'scale(1)';
+        }, 500);
+    }
+}
+
+// Run animation after page load
+setTimeout(animateThankYou, 1000);
+</script>
+
+<style>
+.card {
+    border-radius: 20px;
+    overflow: hidden;
+}
+
+.accordion-button {
+    border-radius: 10px !important;
+    background-color: #f8f9fa;
+    border: 1px solid #e0e0e0;
+}
+
+.accordion-button:not(.collapsed) {
+    background-color: #e3f2fd;
+    color: #0d6efd;
+}
+
+.btn-lg {
+    padding: 0.75rem 2rem;
+    border-radius: 10px;
+    font-weight: 600;
+}
+
+.certificate-container {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border: 2px solid #dee2e6;
+    position: relative;
+}
+
+.certificate-container::before {
+    content: '';
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    right: 20px;
+    bottom: 20px;
+    border: 1px dashed #adb5bd;
+    pointer-events: none;
+}
+
+.fa-check-circle {
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.05);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .card-body {
+        padding: 2rem !important;
+    }
+    
+    .btn-lg {
+        width: 100%;
+        margin-bottom: 1rem;
+    }
+    
+    .d-md-flex {
+        flex-direction: column;
+    }
+}
+
+/* Print styles */
+@media print {
+    .no-print,
+    .modal-footer,
+    .btn {
+        display: none !important;
+    }
+    
+    .certificate-container {
+        border: 3px solid #000 !important;
+        background: white !important;
+    }
+}
+</style>
+{% endblock %}

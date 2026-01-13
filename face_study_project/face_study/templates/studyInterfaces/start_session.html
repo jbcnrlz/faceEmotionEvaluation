@@ -109,10 +109,9 @@
                                                 from most consistent (1) to least consistent.
                                             </li>
                                             <li class="mb-2">
-                                                <strong>Duration:</strong> The session will have approximately 
-                                                {% with config=study_config %}
-                                                    {{ config.images_per_session }} images
-                                                {% endwith %}.
+                                                <strong>Session length:</strong> Each session contains a random number of images 
+                            between {{ study_config.min_images_per_session }} and {{ study_config.max_images_per_session }}.
+                            You'll know the exact number when you start.
                                             </li>
                                             <li>
                                                 <strong>Estimated time:</strong> 10-15 minutes.
@@ -120,8 +119,7 @@
                                         </ol>
                                     </div>
                                 </div>
-                            </div>
-                            
+                            </div>        
                             <div class="accordion-item">
                                 <h2 class="accordion-header" id="headingTwo">
                                     <button class="accordion-button collapsed" type="button" 

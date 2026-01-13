@@ -1,5 +1,7 @@
 {% extends 'base.html' %}
 
+{% load custom_filters %}
+
 {% block title %}Rate Facial Expressions{% endblock %}
 
 {% block content %}
@@ -35,7 +37,22 @@
                             </div>
                         </div>
                     </div>
-
+                    <div class="alert alert-info mb-4">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <i class="fas fa-dice me-2"></i>
+                                <strong>Random Session Length:</strong> This session contains 
+                                <span class="badge bg-primary">{{ progress.total }}</span> images 
+                                (randomly selected between {{ progress.min_images }} and {{ progress.max_images }}).
+                            </div>
+                            <div class="col-md-4 text-end">
+                                <small class="text-muted">
+                                    <i class="fas fa-clock me-1"></i>
+                                    Estimated: {{ progress.total|mul:2 }} minutes
+                                </small>
+                            </div>
+                        </div>
+                    </div>
                     <!-- Image Display -->
                     <div class="text-center mb-5">
                         <div class="card border-0 bg-light mb-3">
@@ -48,7 +65,7 @@
                             </div>
                         </div>
                         <p class="text-muted">
-                            <i class="fas fa-info-circle"></i> Please rank the emotional states below based on this facial expression
+                            <i class="fas fa-info-circle"></i> Use the sliders below to rank emotional states from 1 (most consistent) to {{ emotions.count }} (least consistent)
                         </p>
                     </div>
 
@@ -59,56 +76,110 @@
                         
                         <div class="mb-4">
                             <h5 class="mb-3">
-                                <i class="fas fa-sort-numeric-down me-2"></i>
+                                <i class="fas fa-sliders-h me-2"></i>
                                 Rank Emotional States
                             </h5>
                             <div class="alert alert-info">
                                 <i class="fas fa-lightbulb me-2"></i>
-                                Assign a rank from 1 (most consistent) to {{ emotions.count }} (least consistent) 
-                                for each emotional state. Each number can only be used once.
+                                Drag each slider to rank emotional states from 1 (most consistent) to {{ emotions.count }} (least consistent) 
+                                for this facial expression. Each number can only be used once.
+                            </div>
+                            
+                            <!-- Rank Legend -->
+                            <div class="rank-legend mb-3">
+                                <div class="d-flex justify-content-between small text-muted">
+                                    <span><i class="fas fa-arrow-left"></i> Least Consistent</span>
+                                    <span>Drag sliders to rank</span>
+                                    <span>Most Consistent <i class="fas fa-arrow-right"></i></span>
+                                </div>
                             </div>
                         </div>
 
-                        <!-- Emotional States Ranking -->
-                        <div class="table-responsive">
-                            <table class="table table-hover">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th width="5%">Rank</th>
-                                        <th width="35%">Emotional State</th>
-                                        <th width="50%">Description</th>
-                                        <th width="10%">Score</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for emotion in emotions %}
-                                    <tr>
-                                        <td class="align-middle">
-                                            <span class="badge bg-secondary">{{ forloop.counter }}</span>
-                                        </td>
-                                        <td class="align-middle">
-                                            <strong>{{ emotion.name }}</strong>
-                                        </td>
-                                        <td class="align-middle">
-                                            {% if emotion.description %}
-                                                <small class="text-muted">{{ emotion.description }}</small>
-                                            {% else %}
-                                                <span class="text-muted fst-italic">No description provided</span>
-                                            {% endif %}
-                                        </td>
-                                        <td class="align-middle">
-                                            <input type="number" 
-                                                   name="emotion_{{ emotion.id }}"
-                                                   class="form-control rank-input"
+                        <!-- Emotional States Ranking with Sliders -->
+                        <div class="emotion-sliders-container">
+                            {% for emotion in emotions %}
+                            <div class="emotion-slider-card mb-3 p-3 border rounded" data-emotion-id="{{ emotion.id }}">
+                                <div class="row align-items-center">
+                                    <!-- Emotion Info -->
+                                    <div class="col-md-4">
+                                        <h6 class="mb-1">{{ emotion.name }}</h6>
+                                        {% if emotion.description %}
+                                        <small class="text-muted">{{ emotion.description|truncatechars:60 }}</small>
+                                        {% endif %}
+                                    </div>
+                                    
+                                    <!-- Slider -->
+                                    <div class="col-md-6">
+                                        <div class="slider-container">
+                                            <div class="d-flex justify-content-between mb-1">
+                                                <small class="text-muted">1 (Most)</small>
+                                                <small class="text-muted">{{ emotions.count }} (Least)</small>
+                                            </div>
+                                            <input type="range" 
+                                                   class="form-range emotion-slider"
                                                    min="1"
                                                    max="{{ emotions.count }}"
-                                                   required
+                                                   step="1"
+                                                   value="{{ forloop.counter }}"
+                                                   data-emotion-id="{{ emotion.id }}"
                                                    data-emotion-name="{{ emotion.name }}">
-                                        </td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
+                                            
+                                            <!-- Hidden input for form submission -->
+                                            <input type="hidden" 
+                                                   name="emotion_{{ emotion.id }}"
+                                                   class="rank-value-input"
+                                                   value="{{ forloop.counter }}">
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Current Rank Display -->
+                                    <div class="col-md-2 text-center">
+                                        <div class="rank-display">
+                                            <div class="rank-value-badge">
+                                                <span class="badge bg-primary rank-number" 
+                                                      style="font-size: 1.2rem; min-width: 40px;">
+                                                    {{ forloop.counter }}
+                                                </span>
+                                            </div>
+                                            <small class="text-muted d-block mt-1">Current Rank</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+
+                        <!-- Used Ranks Visualization -->
+                        <div class="card mt-4 mb-4">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-list-ol me-2"></i> Used Ranks Summary
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="used-ranks-visualization">
+                                    <div class="d-flex flex-wrap gap-2 justify-content-center" id="ranksContainer">
+                                        {% for i in emotions|length|get_range %}
+                                        <div class="rank-pill rank-{{ forloop.counter }}" 
+                                             data-rank="{{ forloop.counter }}">
+                                            <span class="badge rank-badge" 
+                                                  style="font-size: 0.9rem; padding: 0.5rem 0.75rem;">
+                                                {{ forloop.counter }}
+                                            </span>
+                                            <div class="rank-emotion-name small mt-1 text-center">
+                                                <em>Empty</em>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                                <div class="mt-3 text-center">
+                                    <small class="text-muted">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        Each number represents a unique rank. Drag sliders to assign emotional states.
+                                    </small>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- Validation and Submission -->
@@ -118,6 +189,10 @@
                                     <div class="alert alert-warning" id="validationAlert" style="display: none;">
                                         <i class="fas fa-exclamation-triangle me-2"></i>
                                         <span id="validationMessage"></span>
+                                    </div>
+                                    <div class="alert alert-success" id="validRanksAlert" style="display: none;">
+                                        <i class="fas fa-check-circle me-2"></i>
+                                        <span>All ranks are properly assigned! You can now submit.</span>
                                     </div>
                                     <div class="form-check mb-3">
                                         <input class="form-check-input" type="checkbox" id="validationCheck" required>
@@ -130,7 +205,7 @@
                                     </div>
                                 </div>
                                 <div class="col-md-4 text-end">
-                                    <button type="submit" class="btn btn-primary btn-lg px-5">
+                                    <button type="submit" class="btn btn-primary btn-lg px-5" id="submitBtn">
                                         {% if progress.current == progress.total %}
                                             <i class="fas fa-flag-checkered me-2"></i> Finish Session
                                         {% else %}
@@ -152,7 +227,7 @@
                     <p class="text-muted mb-4">
                         There are no more images available for classification in this session.
                     </p>
-                    <a href="{% url 'session_complete' %}" class="btn btn-success btn-lg px-4">
+                    <a href="{% url 'faceStudy:session_complete' %}" class="btn btn-success btn-lg px-4">
                         <i class="fas fa-trophy me-2"></i> Complete Session
                     </a>
                 </div>
@@ -169,36 +244,39 @@
                 <div class="card-body">
                     <div class="row">
                         <div class="col-md-6">
-                            <h6>How to Rank:</h6>
+                            <h6>How to Use Sliders:</h6>
                             <ul class="small">
                                 <li class="mb-2">
-                                    <strong>1 = Most consistent</strong>: The emotional state that best matches the expression
+                                    <strong>Drag left</strong>: Lower rank number (more consistent with expression)
                                 </li>
                                 <li class="mb-2">
-                                    <strong>{{ emotions.count }} = Least consistent</strong>: The emotional state that least matches the expression
+                                    <strong>Drag right</strong>: Higher rank number (less consistent with expression)
                                 </li>
                                 <li class="mb-2">
-                                    Each number from 1 to {{ emotions.count }} must be used exactly once
+                                    <strong>Unique ranks</strong>: Each number from 1 to {{ emotions.count }} is used once
+                                </li>
+                                <li class="mb-2">
+                                    <strong>Automatic adjustment</strong>: Moving one slider automatically adjusts others to prevent duplicates
                                 </li>
                                 <li>
-                                    Consider the intensity and clarity of the facial expression
+                                    <strong>Visual feedback</strong>: Used ranks are highlighted in the summary below
                                 </li>
                             </ul>
                         </div>
                         <div class="col-md-6">
-                            <h6>Tips:</h6>
+                            <h6>Ranking Tips:</h6>
                             <ul class="small">
                                 <li class="mb-2">
-                                    <i class="fas fa-eye text-primary me-1"></i> Focus on key facial features: eyes, mouth, eyebrows
+                                    <i class="fas fa-eye text-primary me-1"></i> Focus on overall facial expression, not just one feature
                                 </li>
                                 <li class="mb-2">
-                                    <i class="fas fa-clock text-primary me-1"></i> Take your time - there's no time limit
+                                    <i class="fas fa-sync-alt text-primary me-1"></i> You can adjust multiple times until you're satisfied
                                 </li>
                                 <li class="mb-2">
-                                    <i class="fas fa-redo text-primary me-1"></i> You can't return to previous images
+                                    <i class="fas fa-balance-scale text-primary me-1"></i> Compare emotions relative to each other
                                 </li>
                                 <li>
-                                    <i class="fas fa-lock text-primary me-1"></i> Your responses are saved automatically
+                                    <i class="fas fa-check-double text-primary me-1"></i> All ranks must be assigned before submitting
                                 </li>
                             </ul>
                         </div>
@@ -240,98 +318,166 @@ document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('rankingForm');
     const validationCheck = document.getElementById('validationCheck');
     const validationAlert = document.getElementById('validationAlert');
+    const validRanksAlert = document.getElementById('validRanksAlert');
     const validationMessage = document.getElementById('validationMessage');
-    const rankInputs = document.querySelectorAll('.rank-input');
+    const sliders = document.querySelectorAll('.emotion-slider');
+    const hiddenInputs = document.querySelectorAll('.rank-value-input');
     const modal = new bootstrap.Modal(document.getElementById('rankingModal'));
     const modalMessage = document.getElementById('modalMessage');
-
-    // Track used ranks
-    function validateRanks() {
-        const usedRanks = new Set();
-        const duplicates = [];
-        const outOfRange = [];
-        const missingRanks = new Set(Array.from({length: {{ emotions.count }}}, (_, i) => i + 1));
+    const submitBtn = document.getElementById('submitBtn');
+    const ranksContainer = document.getElementById('ranksContainer');
+    
+    // Initialize rank mapping
+    let rankMap = new Map(); // key: rank number, value: {emotionId, emotionName}
+    let emotionMap = new Map(); // key: emotionId, value: {rank, slider, hiddenInput}
+    
+    // Initialize data structures
+    sliders.forEach(slider => {
+        const emotionId = slider.dataset.emotionId;
+        const emotionName = slider.dataset.emotionName;
+        const currentRank = parseInt(slider.value);
+        const hiddenInput = document.querySelector(`input[name="emotion_${emotionId}"]`);
         
-        let isValid = true;
-        
-        rankInputs.forEach(input => {
-            const value = parseInt(input.value);
-            
-            if (input.value.trim() === '') {
-                isValid = false;
-                return;
-            }
-            
-            if (value < 1 || value > {{ emotions.count }}) {
-                outOfRange.push({
-                    name: input.dataset.emotionName,
-                    value: value
-                });
-                isValid = false;
-            }
-            
-            if (usedRanks.has(value)) {
-                duplicates.push({
-                    name: input.dataset.emotionName,
-                    value: value
-                });
-                isValid = false;
-            } else {
-                usedRanks.add(value);
-                missingRanks.delete(value);
-            }
+        emotionMap.set(emotionId, {
+            rank: currentRank,
+            slider: slider,
+            hiddenInput: hiddenInput,
+            name: emotionName
         });
         
-        return {
-            isValid: isValid && usedRanks.size === {{ emotions.count }},
-            duplicates: duplicates,
-            outOfRange: outOfRange,
-            missingRanks: Array.from(missingRanks)
-        };
-    }
-
-    // Real-time validation
-    rankInputs.forEach(input => {
-        input.addEventListener('change', function() {
-            const value = parseInt(this.value);
+        rankMap.set(currentRank, {
+            emotionId: emotionId,
+            emotionName: emotionName
+        });
+        
+        // Update visual display for this emotion
+        updateEmotionDisplay(emotionId, currentRank);
+    });
+    
+    // Update rank visualization
+    updateRankVisualization();
+    
+    // Slider change handler
+    sliders.forEach(slider => {
+        slider.addEventListener('input', function() {
+            const emotionId = this.dataset.emotionId;
+            const newRank = parseInt(this.value);
+            const oldRank = emotionMap.get(emotionId).rank;
             
-            // Clear previous validation
-            this.classList.remove('is-invalid', 'is-valid');
-            
-            // Validate range
-            if (value < 1 || value > {{ emotions.count }}) {
-                this.classList.add('is-invalid');
-                showValidationAlert(`Please enter a number between 1 and {{ emotions.count }}`);
-                return;
+            // Check if new rank is already taken
+            if (rankMap.has(newRank) && rankMap.get(newRank).emotionId !== emotionId) {
+                // Swap ranks with the emotion that currently has this rank
+                const otherEmotionId = rankMap.get(newRank).emotionId;
+                const otherEmotion = emotionMap.get(otherEmotionId);
+                
+                // Update other emotion to old rank
+                otherEmotion.rank = oldRank;
+                otherEmotion.slider.value = oldRank;
+                otherEmotion.hiddenInput.value = oldRank;
+                rankMap.set(oldRank, {
+                    emotionId: otherEmotionId,
+                    emotionName: otherEmotion.name
+                });
+                
+                // Update other emotion display
+                updateEmotionDisplay(otherEmotionId, oldRank);
             }
             
-            // Check for duplicates
-            const currentValue = value;
-            const sameValueInputs = Array.from(rankInputs).filter(inp => 
-                inp !== this && parseInt(inp.value) === currentValue
-            );
+            // Update current emotion
+            emotionMap.get(emotionId).rank = newRank;
+            emotionMap.get(emotionId).hiddenInput.value = newRank;
+            rankMap.set(newRank, {
+                emotionId: emotionId,
+                emotionName: emotionMap.get(emotionId).name
+            });
             
-            if (sameValueInputs.length > 0) {
-                this.classList.add('is-invalid');
-                sameValueInputs.forEach(inp => inp.classList.add('is-invalid'));
-                showValidationAlert(`Rank ${currentValue} is used multiple times. Each rank must be unique.`);
-            } else {
-                this.classList.add('is-valid');
-                sameValueInputs.forEach(inp => inp.classList.remove('is-invalid'));
-                hideValidationAlert();
-            }
+            // Update display
+            updateEmotionDisplay(emotionId, newRank);
+            updateRankVisualization();
+            validateRanks();
         });
     });
-
-    function showValidationAlert(message) {
-        validationMessage.textContent = message;
-        validationAlert.style.display = 'block';
+    
+    // Update emotion display (badge, etc.)
+    function updateEmotionDisplay(emotionId, rank) {
+        const emotionCard = document.querySelector(`[data-emotion-id="${emotionId}"]`);
+        const rankBadge = emotionCard.querySelector('.rank-number');
+        
+        // Update badge
+        rankBadge.textContent = rank;
+        
+        // Update badge color based on rank position
+        const totalEmotions = sliders.length;
+        const rankPercent = (rank - 1) / (totalEmotions - 1);
+        
+        if (rankPercent < 0.33) {
+            rankBadge.className = 'badge bg-success rank-number';
+        } else if (rankPercent < 0.66) {
+            rankBadge.className = 'badge bg-warning rank-number';
+        } else {
+            rankBadge.className = 'badge bg-secondary rank-number';
+        }
     }
-
-    function hideValidationAlert() {
-        validationAlert.style.display = 'none';
+    
+    // Update rank visualization
+    function updateRankVisualization() {
+        const rankPills = ranksContainer.querySelectorAll('.rank-pill');
+        
+        rankPills.forEach(pill => {
+            const rank = parseInt(pill.dataset.rank);
+            const badge = pill.querySelector('.rank-badge');
+            const emotionNameSpan = pill.querySelector('.rank-emotion-name');
+            
+            if (rankMap.has(rank)) {
+                const emotionInfo = rankMap.get(rank);
+                badge.className = 'badge bg-primary rank-badge';
+                emotionNameSpan.textContent = emotionInfo.emotionName;
+                emotionNameSpan.className = 'rank-emotion-name small mt-1 text-center';
+            } else {
+                badge.className = 'badge bg-light text-dark rank-badge';
+                emotionNameSpan.textContent = 'Empty';
+                emotionNameSpan.className = 'rank-emotion-name small mt-1 text-center text-muted';
+            }
+        });
     }
-
+    
+    // Validate ranks
+    function validateRanks() {
+        const usedRanks = new Set();
+        const missingRanks = [];
+        
+        // Check all emotions have unique ranks
+        for (let i = 1; i <= sliders.length; i++) {
+            if (rankMap.has(i)) {
+                usedRanks.add(i);
+            } else {
+                missingRanks.push(i);
+            }
+        }
+        
+        const isValid = usedRanks.size === sliders.length && missingRanks.length === 0;
+        
+        // Show/hide validation alerts
+        if (isValid) {
+            validationAlert.style.display = 'none';
+            validRanksAlert.style.display = 'block';
+            submitBtn.disabled = false;
+            submitBtn.classList.remove('btn-secondary');
+            submitBtn.classList.add('btn-primary');
+        } else {
+            validRanksAlert.style.display = 'none';
+            
+            if (missingRanks.length > 0) {
+                validationMessage.textContent = `Missing ranks: ${missingRanks.join(', ')}`;
+                validationAlert.style.display = 'block';
+            }
+            
+            submitBtn.disabled = false; // Still allow submission, but warn
+        }
+        
+        return isValid;
+    }
+    
     // Form submission validation
     form.addEventListener('submit', function(e) {
         e.preventDefault();
@@ -347,22 +493,8 @@ document.addEventListener('DOMContentLoaded', function() {
         // Validate ranks
         const validation = validateRanks();
         
-        if (!validation.isValid) {
-            let errorMessage = 'Please fix the following issues:';
-            
-            if (validation.duplicates.length > 0) {
-                errorMessage += '\n• Duplicate ranks detected';
-            }
-            
-            if (validation.outOfRange.length > 0) {
-                errorMessage += '\n• Some ranks are outside the valid range (1-{{ emotions.count }})';
-            }
-            
-            if (validation.missingRanks.length > 0) {
-                errorMessage += `\n• Missing ranks: ${validation.missingRanks.join(', ')}`;
-            }
-            
-            modalMessage.textContent = errorMessage;
+        if (!validation) {
+            modalMessage.textContent = 'Please ensure all ranks are properly assigned before submitting.';
             modal.show();
             return;
         }
@@ -370,12 +502,12 @@ document.addEventListener('DOMContentLoaded', function() {
         // If all validations pass, submit the form
         this.submit();
     });
-
+    
     // Clear validation on checkbox change
     validationCheck.addEventListener('change', function() {
         this.classList.remove('is-invalid');
     });
-
+    
     // Keyboard shortcuts
     document.addEventListener('keydown', function(e) {
         // Ctrl + Enter to submit
@@ -383,40 +515,113 @@ document.addEventListener('DOMContentLoaded', function() {
             validationCheck.checked = true;
             form.dispatchEvent(new Event('submit'));
         }
-        
-        // Escape to clear form
-        if (e.key === 'Escape') {
-            rankInputs.forEach(input => {
-                input.value = '';
-                input.classList.remove('is-valid', 'is-invalid');
-            });
-        }
     });
-
-    // Auto-focus first input
-    if (rankInputs.length > 0) {
-        rankInputs[0].focus();
-    }
+    
+    // Initial validation
+    validateRanks();
 });
+
+// Custom template filter for range (if not already defined)
+if (typeof window.getRange === 'undefined') {
+    window.getRange = function(n) {
+        return Array.from({length: n}, (_, i) => i + 1);
+    };
+}
 </script>
 
 <style>
-.rank-input {
-    width: 80px;
-    text-align: center;
-    font-weight: bold;
+/* Slider Styles */
+.emotion-slider-card {
+    background-color: #f8f9fa;
+    transition: all 0.3s ease;
+    border-left: 4px solid #4e73df !important;
 }
 
-.rank-input.is-valid {
-    border-color: #198754;
-    background-color: rgba(25, 135, 84, 0.1);
+.emotion-slider-card:hover {
+    background-color: #e9ecef;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
 }
 
-.rank-input.is-invalid {
-    border-color: #dc3545;
-    background-color: rgba(220, 53, 69, 0.1);
+.form-range.emotion-slider {
+    height: 8px;
+    cursor: pointer;
 }
 
+.form-range.emotion-slider::-webkit-slider-thumb {
+    background-color: #4e73df;
+    border: 2px solid #fff;
+    width: 20px;
+    height: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.form-range.emotion-slider::-moz-range-thumb {
+    background-color: #4e73df;
+    border: 2px solid #fff;
+    width: 20px;
+    height: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.form-range.emotion-slider::-webkit-slider-runnable-track {
+    background: linear-gradient(to right, #4e73df, #f8f9fa);
+    height: 8px;
+    border-radius: 4px;
+}
+
+.form-range.emotion-slider::-moz-range-track {
+    background: linear-gradient(to right, #4e73df, #f8f9fa);
+    height: 8px;
+    border-radius: 4px;
+}
+
+/* Rank Visualization */
+.rank-pill {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0.5rem;
+    border-radius: 8px;
+    min-width: 60px;
+    transition: all 0.3s ease;
+}
+
+.rank-pill:hover {
+    transform: scale(1.05);
+}
+
+.rank-badge {
+    font-size: 0.9rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.rank-emotion-name {
+    max-width: 80px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Rank Display */
+.rank-value-badge {
+    margin-bottom: 0.5rem;
+}
+
+.rank-number {
+    font-size: 1.2rem;
+    min-width: 40px;
+    display: inline-block;
+    transition: all 0.3s ease;
+}
+
+/* Progress Bar Animation */
 .progress-bar-animated {
     animation: progress-bar-stripes 1s linear infinite;
 }
@@ -426,30 +631,24 @@ document.addEventListener('DOMContentLoaded', function() {
     100% { background-position: 0 0; }
 }
 
-.table tbody tr:hover {
-    background-color: rgba(0, 0, 0, 0.02);
-    transition: background-color 0.2s ease;
-}
-
-.card {
-    border-radius: 12px;
-    overflow: hidden;
-}
-
-.btn-lg {
-    padding: 0.75rem 2.5rem;
-    border-radius: 8px;
-    font-weight: 600;
-}
-
 /* Responsive adjustments */
 @media (max-width: 768px) {
-    .table-responsive {
-        font-size: 0.9rem;
+    .emotion-slider-card {
+        padding: 1rem !important;
     }
     
-    .rank-input {
-        width: 60px;
+    .emotion-slider-card .row > div {
+        margin-bottom: 0.5rem;
+    }
+    
+    .rank-pill {
+        min-width: 50px;
+    }
+    
+    .rank-badge {
+        width: 35px;
+        height: 35px;
+        font-size: 0.8rem;
     }
     
     .btn-lg {
@@ -458,23 +657,36 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 }
 
-/* Custom scrollbar for table */
-.table-responsive::-webkit-scrollbar {
-    height: 8px;
+/* Custom scrollbar for sliders container */
+.emotion-sliders-container {
+    max-height: 500px;
+    overflow-y: auto;
+    padding-right: 5px;
 }
 
-.table-responsive::-webkit-scrollbar-track {
+.emotion-sliders-container::-webkit-scrollbar {
+    width: 8px;
+}
+
+.emotion-sliders-container::-webkit-scrollbar-track {
     background: #f1f1f1;
     border-radius: 4px;
 }
 
-.table-responsive::-webkit-scrollbar-thumb {
+.emotion-sliders-container::-webkit-scrollbar-thumb {
     background: #c1c1c1;
     border-radius: 4px;
 }
 
-.table-responsive::-webkit-scrollbar-thumb:hover {
+.emotion-sliders-container::-webkit-scrollbar-thumb:hover {
     background: #a8a8a8;
+}
+
+/* Used ranks visualization */
+.used-ranks-visualization {
+    padding: 1rem;
+    background-color: #f8f9fa;
+    border-radius: 8px;
 }
 </style>
 {% endblock %}

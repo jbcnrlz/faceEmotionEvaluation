@@ -8,9 +8,10 @@ from django.core.paginator import Paginator
 from django.conf import settings
 import json
 from django.contrib.auth.decorators import login_required
-
+import random
 from .models import *
 from .forms import *
+from django.db.models import Count
 
 @login_required
 def upload_image(request):
@@ -40,15 +41,29 @@ def start_session(request):
             
             if participant.completed_sessions > 0:
                 messages.warning(request, 'Este e-mail já participou do estudo.')
-                return render(request, 'start_session.html', {
+                return render(request, 'studyInterfaces/start_session.html', {
                     'form': form,
                     'study_config': StudyConfiguration.objects.filter(is_active=True).first()
                 })
             
-            # Inicia sessão
+            # Obtém configuração ativa
+            config = StudyConfiguration.objects.filter(is_active=True).first()
+            if not config:
+                config = StudyConfiguration.objects.create()
+            
+            # Gera número aleatório de imagens para esta sessão
+            images_for_this_session = random.randint(
+                config.min_images_per_session, 
+                config.max_images_per_session
+            )
+            
+            # Inicia sessão com número aleatório de imagens
             request.session['participant_email'] = email
             request.session['session_active'] = True
             request.session['rated_images'] = []
+            request.session['session_image_count'] = images_for_this_session
+            request.session['session_min_images'] = config.min_images_per_session
+            request.session['session_max_images'] = config.max_images_per_session
             
             return redirect('faceStudy:rate_images')
     else:
@@ -58,7 +73,7 @@ def start_session(request):
     study_config = StudyConfiguration.objects.filter(is_active=True).first()
     if not study_config:
         # Cria configuração padrão se não existir
-        study_config = StudyConfiguration.objects.create(images_per_session=10, is_active=True)
+        study_config = StudyConfiguration.objects.create()
     
     return render(request, 'studyInterfaces/start_session.html', {
         'form': form,
@@ -79,6 +94,9 @@ def rate_images(request):
     config = StudyConfiguration.objects.filter(is_active=True).first()
     if not config:
         config = StudyConfiguration.objects.create()
+    
+    # Obtém número de imagens para esta sessão (armazenado na sessão)
+    session_image_count = request.session.get('session_image_count', 10)
     
     # Obter todas as emoções para o formulário
     emotions = EmotionalState.objects.all().order_by('name')
@@ -105,9 +123,8 @@ def rate_images(request):
                         rank=int(rank_value)
                     )
             
-            # Marca imagem como avaliada
-            image.is_rated = True
-            image.save()
+            # NÃO marcar imagem como avaliada globalmente
+            # O controle agora é feito pela contagem de ratings
             
             # Atualiza sessão
             rated = request.session.get('rated_images', [])
@@ -115,7 +132,7 @@ def rate_images(request):
             request.session['rated_images'] = rated
             
             # Verifica se completou a sessão
-            if len(rated) >= config.images_per_session:
+            if len(rated) >= session_image_count:
                 participant.completed_sessions += 1
                 participant.save()
                 request.session['session_active'] = False
@@ -127,20 +144,22 @@ def rate_images(request):
     rated_ids = request.session.get('rated_images', [])
     
     # Se já avaliou todas as imagens da sessão
-    if len(rated_ids) >= config.images_per_session:
+    if len(rated_ids) >= session_image_count:
         participant.completed_sessions += 1
         participant.save()
         request.session['session_active'] = False
         return redirect('faceStudy:session_complete')
     
-    # Busca a próxima imagem
-    # 1. Imagens que não foram avaliadas globalmente
+    # Busca a próxima imagem disponível
+    # 1. Imagens que ainda não atingiram o limite máximo de avaliações
     # 2. Exclui imagens que este participante já avaliou
     # 3. Exclui imagens já avaliadas nesta sessão
-    # 4. Ordena aleatoriamente e pega a primeira
     
-    current_image = FaceImage.objects.filter(
-        is_rated=False
+    # Annota cada imagem com a contagem de ratings
+    current_image = FaceImage.objects.annotate(
+        rating_count=Count('ratings')
+    ).filter(
+        rating_count__lt=config.max_ratings_per_image  # Ainda não atingiu o limite
     ).exclude(
         id__in=ImageRating.objects.filter(
             participant=participant
@@ -150,21 +169,35 @@ def rate_images(request):
     ).order_by('?').first()
     
     if not current_image:
-        # Não há mais imagens disponíveis
+        # Não há mais imagens disponíveis para este participante
         participant.completed_sessions += 1
         participant.save()
         request.session['session_active'] = False
         return redirect('faceStudy:session_complete')
     
+    # Calcular o progresso da imagem
+    image_rating_count = current_image.ratings.count()
+    image_rating_progress = (image_rating_count / config.max_ratings_per_image) * 100
+    
     form = EmotionRankingForm(emotions=emotions)
-
+    
     return render(request, 'studyInterfaces/rate_images.html', {
         'image': current_image,
         'emotions': emotions,
         'form': form,
+        'config': config,
+        'image_rating_info': {
+            'current_count': image_rating_count,
+            'max_allowed': config.max_ratings_per_image,
+            'progress_percent': image_rating_progress,
+            'remaining': config.max_ratings_per_image - image_rating_count
+        },
         'progress': {
             'current': len(rated_ids) + 1,
-            'total': config.images_per_session
+            'total': session_image_count,
+            'min_images': request.session.get('session_min_images', 1),
+            'max_images': request.session.get('session_max_images', 10),
+            'estimated_time': session_image_count * 2,
         }
     })
 
