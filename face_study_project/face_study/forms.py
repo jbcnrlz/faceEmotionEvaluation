@@ -23,6 +23,30 @@ class ImageUploadForm(forms.ModelForm):
             })
         }
 
+class EmotionAgreementForm(forms.Form):
+    def __init__(self, *args, **kwargs):
+        emotions = kwargs.pop('emotions', [])
+        super().__init__(*args, **kwargs)
+        
+        for emotion in emotions:
+            self.fields[f'emotion_{emotion.id}'] = forms.DecimalField(
+                label=emotion.name,
+                min_value=0,
+                max_value=1,
+                decimal_places=2,
+                widget=forms.NumberInput(attrs={
+                    'class': 'form-control agreement-input',
+                    'min': '0',
+                    'max': '1',
+                    'step': '0.01',
+                    'data-emotion-id': emotion.id,
+                    'data-emotion-name': emotion.name,
+                }),
+                required=True,
+                initial=0.5  # Valor padrão
+            )
+
+
 class EmotionRankingForm(forms.Form):
     def __init__(self, *args, **kwargs):
         emotions = kwargs.pop('emotions', [])

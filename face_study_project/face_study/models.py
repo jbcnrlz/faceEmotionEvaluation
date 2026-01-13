@@ -2,6 +2,7 @@ from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
 import uuid
 import os
+from decimal import Decimal
 
 def image_upload_path(instance, filename):
     ext = filename.split('.')[-1]
@@ -84,16 +85,19 @@ class ImageRating(models.Model):
 class EmotionRanking(models.Model):
     rating = models.ForeignKey(ImageRating, on_delete=models.CASCADE, related_name='emotion_rankings')
     emotion = models.ForeignKey(EmotionalState, on_delete=models.CASCADE)
-    rank = models.IntegerField(
-        validators=[MinValueValidator(1), MaxValueValidator(10)]
+    agreement_level = models.DecimalField(
+        max_digits=3,  # 0.00 a 1.00
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal('0.00')), MaxValueValidator(Decimal('1.00'))]
     )
+    created_at = models.DateTimeField(auto_now_add=True)
     
     class Meta:
-        unique_together = ['rating', 'rank']
-        ordering = ['rating', 'rank']
+        unique_together = ['rating', 'emotion']  # Cada emoção só pode ser avaliada uma vez por rating
+        ordering = ['emotion__name']
     
     def __str__(self):
-        return f"Rank {self.rank}: {self.emotion.name}"
+        return f"{self.emotion.name}: {self.agreement_level}"
 
 class StudyConfiguration(models.Model):
     min_images_per_session = models.IntegerField(

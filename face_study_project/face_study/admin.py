@@ -102,9 +102,10 @@ class EmotionalStateAdmin(admin.ModelAdmin):
 
 @admin.register(EmotionRanking)
 class EmotionRankingAdmin(admin.ModelAdmin):
-    list_display = ['rating', 'emotion', 'rank']
-    list_filter = ['emotion', 'rank']
+    list_display = ['rating', 'emotion', 'agreement_level', 'created_at']
+    list_filter = ['emotion', 'agreement_level']
     search_fields = ['emotion__name', 'rating__participant__email']
+    list_editable = ['agreement_level']
 
 @admin.register(StudyConfiguration)
 class StudyConfigurationAdmin(admin.ModelAdmin):

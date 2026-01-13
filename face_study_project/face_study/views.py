@@ -95,7 +95,7 @@ def rate_images(request):
     if not config:
         config = StudyConfiguration.objects.create()
     
-    # Obtém número de imagens para esta sessão (armazenado na sessão)
+    # Obtém número de imagens para esta sessão
     session_image_count = request.session.get('session_image_count', 10)
     
     # Obter todas as emoções para o formulário
@@ -112,19 +112,34 @@ def rate_images(request):
                 image=image
             )
             
-            # Processa rankings
+            # Processa níveis de concordância
             for emotion in emotions:
-                rank_key = f'emotion_{emotion.id}'
-                rank_value = request.POST.get(rank_key)
-                if rank_value:
-                    EmotionRanking.objects.create(
-                        rating=rating,
-                        emotion=emotion,
-                        rank=int(rank_value)
-                    )
-            
-            # NÃO marcar imagem como avaliada globalmente
-            # O controle agora é feito pela contagem de ratings
+                agreement_key = f'emotion_{emotion.id}'
+                agreement_value = request.POST.get(agreement_key)
+                if agreement_value:
+                    # Converte para Decimal e valida
+                    try:
+                        agreement_decimal = Decimal(agreement_value)
+                        if agreement_decimal < Decimal('0.00'):
+                            agreement_decimal = Decimal('0.00')
+                        elif agreement_decimal > Decimal('1.00'):
+                            agreement_decimal = Decimal('1.00')
+                        
+                        # Arredonda para 2 casas decimais
+                        agreement_decimal = agreement_decimal.quantize(Decimal('0.01'))
+                        
+                        EmotionRanking.objects.create(
+                            rating=rating,
+                            emotion=emotion,
+                            agreement_level=agreement_decimal
+                        )
+                    except:
+                        # Se houver erro, use um valor padrão
+                        EmotionRanking.objects.create(
+                            rating=rating,
+                            emotion=emotion,
+                            agreement_level=Decimal('0.50')
+                        )
             
             # Atualiza sessão
             rated = request.session.get('rated_images', [])
@@ -136,7 +151,7 @@ def rate_images(request):
                 participant.completed_sessions += 1
                 participant.save()
                 request.session['session_active'] = False
-                return redirect('faceStudy:session_complete')
+                return redirect('session_complete')
             
             return redirect('faceStudy:rate_images')
     
@@ -148,18 +163,13 @@ def rate_images(request):
         participant.completed_sessions += 1
         participant.save()
         request.session['session_active'] = False
-        return redirect('faceStudy:session_complete')
+        return redirect('session_complete')
     
     # Busca a próxima imagem disponível
-    # 1. Imagens que ainda não atingiram o limite máximo de avaliações
-    # 2. Exclui imagens que este participante já avaliou
-    # 3. Exclui imagens já avaliadas nesta sessão
-    
-    # Annota cada imagem com a contagem de ratings
     current_image = FaceImage.objects.annotate(
         rating_count=Count('ratings')
     ).filter(
-        rating_count__lt=config.max_ratings_per_image  # Ainda não atingiu o limite
+        rating_count__lt=config.max_ratings_per_image
     ).exclude(
         id__in=ImageRating.objects.filter(
             participant=participant
@@ -169,17 +179,18 @@ def rate_images(request):
     ).order_by('?').first()
     
     if not current_image:
-        # Não há mais imagens disponíveis para este participante
+        # Não há mais imagens disponíveis
         participant.completed_sessions += 1
         participant.save()
         request.session['session_active'] = False
         return redirect('faceStudy:session_complete')
     
-    # Calcular o progresso da imagem
+    # Calcular estatísticas da imagem
     image_rating_count = current_image.ratings.count()
     image_rating_progress = (image_rating_count / config.max_ratings_per_image) * 100
     
-    form = EmotionRankingForm(emotions=emotions)
+    # Cria o formulário de concordância
+    form = EmotionAgreementForm(emotions=emotions)
     
     return render(request, 'studyInterfaces/rate_images.html', {
         'image': current_image,
@@ -200,6 +211,7 @@ def rate_images(request):
             'estimated_time': session_image_count * 2,
         }
     })
+
 
 def session_complete(request):
     if 'participant_email' in request.session:

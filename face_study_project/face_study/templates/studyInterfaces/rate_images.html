@@ -1,5 +1,4 @@
 {% extends 'base.html' %}
-
 {% load custom_filters %}
 
 {% block title %}Rate Facial Expressions{% endblock %}
@@ -37,6 +36,8 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- Random Session Info -->
                     <div class="alert alert-info mb-4">
                         <div class="row">
                             <div class="col-md-8">
@@ -53,55 +54,85 @@
                             </div>
                         </div>
                     </div>
-                    <!-- Image Display -->
+
+                    <!-- Image Display with Rating Limit Info -->
                     <div class="text-center mb-5">
                         <div class="card border-0 bg-light mb-3">
                             <div class="card-body p-3">
-                                <h6 class="mb-2">Image Code: <code class="bg-white p-1 rounded">{{ image.code }}</code></h6>
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <h6 class="mb-0">Image Code: <code class="bg-white p-1 rounded">{{ image.code }}</code></h6>
+                                    <span class="badge {% if image_rating_info.remaining > 0 %}bg-info{% else %}bg-warning{% endif %}">
+                                        <i class="fas fa-users me-1"></i>
+                                        {{ image_rating_info.current_count }}/{{ image_rating_info.max_allowed }} ratings
+                                    </span>
+                                </div>
+                                
                                 <img src="{{ image.image.url }}" 
                                      alt="Facial expression to classify" 
-                                     class="img-fluid rounded shadow" 
+                                     class="img-fluid rounded shadow mb-3" 
                                      style="max-height: 400px; max-width: 100%;">
+                                
+                                <!-- Rating Progress for this Image -->
+                                <div class="mb-3">
+                                    <div class="d-flex justify-content-between small text-muted mb-1">
+                                        <span>Image Rating Progress</span>
+                                        <span>{{ image_rating_info.remaining }} more ratings available</span>
+                                    </div>
+                                    <div class="progress" style="height: 8px;">
+                                        <div class="progress-bar 
+                                            {% if image_rating_info.progress_percent < 50 %}bg-success
+                                            {% elif image_rating_info.progress_percent < 80 %}bg-warning
+                                            {% else %}bg-danger{% endif %}" 
+                                             role="progressbar" 
+                                             style="width: {{ image_rating_info.progress_percent }}%"
+                                             aria-valuenow="{{ image_rating_info.current_count }}" 
+                                             aria-valuemin="0" 
+                                             aria-valuemax="{{ image_rating_info.max_allowed }}">
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         <p class="text-muted">
-                            <i class="fas fa-info-circle"></i> Use the sliders below to rank emotional states from 1 (most consistent) to {{ emotions.count }} (least consistent)
+                            <i class="fas fa-info-circle"></i> 
+                            Rate how much each emotional state is expressed in this face (0 = not at all, 1 = completely)
                         </p>
                     </div>
 
-                    <!-- Ranking Form -->
-                    <form method="post" id="rankingForm">
+                    <!-- Agreement Form -->
+                    <form method="post" id="agreementForm">
                         {% csrf_token %}
                         <input type="hidden" name="image_id" value="{{ image.id }}">
                         
                         <div class="mb-4">
                             <h5 class="mb-3">
                                 <i class="fas fa-sliders-h me-2"></i>
-                                Rank Emotional States
+                                Rate Emotional States Agreement
                             </h5>
                             <div class="alert alert-info">
                                 <i class="fas fa-lightbulb me-2"></i>
-                                Drag each slider to rank emotional states from 1 (most consistent) to {{ emotions.count }} (least consistent) 
-                                for this facial expression. Each number can only be used once.
+                                For each emotional state below, indicate how much you agree that it is expressed in the face above.
+                                Use the sliders to rate from 0 (completely disagree) to 1 (completely agree).
+                                Multiple emotions can have the same rating.
                             </div>
                             
-                            <!-- Rank Legend -->
-                            <div class="rank-legend mb-3">
+                            <!-- Agreement Legend -->
+                            <div class="agreement-legend mb-3">
                                 <div class="d-flex justify-content-between small text-muted">
-                                    <span><i class="fas fa-arrow-left"></i> Least Consistent</span>
-                                    <span>Drag sliders to rank</span>
-                                    <span>Most Consistent <i class="fas fa-arrow-right"></i></span>
+                                    <span><i class="fas fa-times-circle me-1"></i> Completely Disagree (0)</span>
+                                    <span>Adjust sliders independently</span>
+                                    <span>Completely Agree (1) <i class="fas fa-check-circle ms-1"></i></span>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Emotional States Ranking with Sliders -->
-                        <div class="emotion-sliders-container">
+                        <!-- Emotional States Agreement with Sliders -->
+                        <div class="emotion-agreement-container">
                             {% for emotion in emotions %}
-                            <div class="emotion-slider-card mb-3 p-3 border rounded" data-emotion-id="{{ emotion.id }}">
+                            <div class="emotion-agreement-card mb-3 p-3 border rounded" data-emotion-id="{{ emotion.id }}">
                                 <div class="row align-items-center">
                                     <!-- Emotion Info -->
-                                    <div class="col-md-4">
+                                    <div class="col-md-3">
                                         <h6 class="mb-1">{{ emotion.name }}</h6>
                                         {% if emotion.description %}
                                         <small class="text-muted">{{ emotion.description|truncatechars:60 }}</small>
@@ -112,36 +143,51 @@
                                     <div class="col-md-6">
                                         <div class="slider-container">
                                             <div class="d-flex justify-content-between mb-1">
-                                                <small class="text-muted">1 (Most)</small>
-                                                <small class="text-muted">{{ emotions.count }} (Least)</small>
+                                                <small class="text-muted">0.0</small>
+                                                <small class="text-muted">0.5</small>
+                                                <small class="text-muted">1.0</small>
                                             </div>
                                             <input type="range" 
-                                                   class="form-range emotion-slider"
-                                                   min="1"
-                                                   max="{{ emotions.count }}"
-                                                   step="1"
-                                                   value="{{ forloop.counter }}"
+                                                   class="form-range agreement-slider"
+                                                   min="0"
+                                                   max="1"
+                                                   step="0.01"
+                                                   value="0.5"
                                                    data-emotion-id="{{ emotion.id }}"
                                                    data-emotion-name="{{ emotion.name }}">
-                                            
-                                            <!-- Hidden input for form submission -->
-                                            <input type="hidden" 
-                                                   name="emotion_{{ emotion.id }}"
-                                                   class="rank-value-input"
-                                                   value="{{ forloop.counter }}">
                                         </div>
                                     </div>
                                     
-                                    <!-- Current Rank Display -->
-                                    <div class="col-md-2 text-center">
-                                        <div class="rank-display">
-                                            <div class="rank-value-badge">
-                                                <span class="badge bg-primary rank-number" 
-                                                      style="font-size: 1.2rem; min-width: 40px;">
-                                                    {{ forloop.counter }}
+                                    <!-- Numeric Input and Display -->
+                                    <div class="col-md-3">
+                                        <div class="input-group">
+                                            <input type="number" 
+                                                   name="emotion_{{ emotion.id }}"
+                                                   class="form-control agreement-input text-center"
+                                                   min="0"
+                                                   max="1"
+                                                   step="0.01"
+                                                   value="0.50"
+                                                   data-emotion-id="{{ emotion.id }}"
+                                                   required>
+                                            <span class="input-group-text">/1.00</span>
+                                        </div>
+                                        <div class="agreement-display mt-2 text-center">
+                                            <div class="agreement-value-badge">
+                                                <span class="badge 
+                                                    {% if emotion.id|stringformat:'s' in form.initial %}
+                                                        {% with value=form.initial.emotion_id %}
+                                                            {% if value < 0.33 %}bg-danger
+                                                            {% elif value < 0.66 %}bg-warning
+                                                            {% else %}bg-success{% endif %}
+                                                        {% endwith %}
+                                                    {% else %}bg-secondary{% endif %}
+                                                    agreement-value" 
+                                                      style="font-size: 0.9rem; min-width: 60px;">
+                                                    <span class="agreement-number">0.50</span>
                                                 </span>
                                             </div>
-                                            <small class="text-muted d-block mt-1">Current Rank</small>
+                                            <small class="text-muted d-block mt-1">Agreement Level</small>
                                         </div>
                                     </div>
                                 </div>
@@ -149,34 +195,61 @@
                             {% endfor %}
                         </div>
 
-                        <!-- Used Ranks Visualization -->
+                        <!-- Agreement Summary -->
                         <div class="card mt-4 mb-4">
                             <div class="card-header bg-light">
                                 <h6 class="mb-0">
-                                    <i class="fas fa-list-ol me-2"></i> Used Ranks Summary
+                                    <i class="fas fa-chart-bar me-2"></i> Agreement Summary
                                 </h6>
                             </div>
                             <div class="card-body">
-                                <div class="used-ranks-visualization">
-                                    <div class="d-flex flex-wrap gap-2 justify-content-center" id="ranksContainer">
-                                        {% for i in emotions|length|get_range %}
-                                        <div class="rank-pill rank-{{ forloop.counter }}" 
-                                             data-rank="{{ forloop.counter }}">
-                                            <span class="badge rank-badge" 
-                                                  style="font-size: 0.9rem; padding: 0.5rem 0.75rem;">
-                                                {{ forloop.counter }}
-                                            </span>
-                                            <div class="rank-emotion-name small mt-1 text-center">
-                                                <em>Empty</em>
+                                <div class="row">
+                                    <div class="col-md-8">
+                                        <div class="agreement-distribution-chart">
+                                            <div class="d-flex align-items-center mb-2">
+                                                <small class="text-muted me-3">Distribution:</small>
+                                                <div class="d-flex flex-wrap gap-1" id="agreementDistribution">
+                                                    <!-- Will be filled by JavaScript -->
+                                                </div>
+                                            </div>
+                                            <div class="progress" style="height: 20px;">
+                                                <div class="progress-bar bg-danger" style="width: 0%;" 
+                                                     id="lowAgreementBar" data-toggle="tooltip" title="Low (0.0-0.33)">
+                                                    <small>Low</small>
+                                                </div>
+                                                <div class="progress-bar bg-warning" style="width: 0%;" 
+                                                     id="mediumAgreementBar" data-toggle="tooltip" title="Medium (0.34-0.66)">
+                                                    <small>Medium</small>
+                                                </div>
+                                                <div class="progress-bar bg-success" style="width: 0%;" 
+                                                     id="highAgreementBar" data-toggle="tooltip" title="High (0.67-1.00)">
+                                                    <small>High</small>
+                                                </div>
                                             </div>
                                         </div>
-                                        {% endfor %}
+                                    </div>
+                                    <div class="col-md-4 text-end">
+                                        <div class="agreement-stats">
+                                            <h6 class="mb-2">Statistics</h6>
+                                            <div class="d-flex justify-content-between mb-1">
+                                                <small>Average:</small>
+                                                <small id="averageAgreement">0.50</small>
+                                            </div>
+                                            <div class="d-flex justify-content-between mb-1">
+                                                <small>Highest:</small>
+                                                <small id="highestAgreement">0.50</small>
+                                            </div>
+                                            <div class="d-flex justify-content-between">
+                                                <small>Lowest:</small>
+                                                <small id="lowestAgreement">0.50</small>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                                 <div class="mt-3 text-center">
                                     <small class="text-muted">
                                         <i class="fas fa-info-circle me-1"></i>
-                                        Each number represents a unique rank. Drag sliders to assign emotional states.
+                                        Each emotional state is rated independently. There's no limit on how many can have the same rating.
                                     </small>
                                 </div>
                             </div>
@@ -190,17 +263,13 @@
                                         <i class="fas fa-exclamation-triangle me-2"></i>
                                         <span id="validationMessage"></span>
                                     </div>
-                                    <div class="alert alert-success" id="validRanksAlert" style="display: none;">
-                                        <i class="fas fa-check-circle me-2"></i>
-                                        <span>All ranks are properly assigned! You can now submit.</span>
-                                    </div>
                                     <div class="form-check mb-3">
                                         <input class="form-check-input" type="checkbox" id="validationCheck" required>
                                         <label class="form-check-label" for="validationCheck">
-                                            I confirm that I have ranked all emotional states appropriately
+                                            I confirm that I have rated all emotional states appropriately
                                         </label>
                                         <div class="invalid-feedback">
-                                            Please confirm your rankings before proceeding.
+                                            Please confirm your ratings before proceeding.
                                         </div>
                                     </div>
                                 </div>
@@ -238,45 +307,48 @@
             <div class="card shadow-sm">
                 <div class="card-header bg-light">
                     <h6 class="mb-0">
-                        <i class="fas fa-question-circle me-2"></i> Classification Instructions
+                        <i class="fas fa-question-circle me-2"></i> Rating Instructions
                     </h6>
                 </div>
                 <div class="card-body">
                     <div class="row">
                         <div class="col-md-6">
-                            <h6>How to Use Sliders:</h6>
+                            <h6>How to Rate Agreement:</h6>
                             <ul class="small">
                                 <li class="mb-2">
-                                    <strong>Drag left</strong>: Lower rank number (more consistent with expression)
+                                    <strong>0.0 (Completely disagree)</strong>: The emotional state is not expressed at all
                                 </li>
                                 <li class="mb-2">
-                                    <strong>Drag right</strong>: Higher rank number (less consistent with expression)
+                                    <strong>0.5 (Neutral/Moderate)</strong>: The emotional state is somewhat expressed
                                 </li>
                                 <li class="mb-2">
-                                    <strong>Unique ranks</strong>: Each number from 1 to {{ emotions.count }} is used once
+                                    <strong>1.0 (Completely agree)</strong>: The emotional state is fully and clearly expressed
                                 </li>
                                 <li class="mb-2">
-                                    <strong>Automatic adjustment</strong>: Moving one slider automatically adjusts others to prevent duplicates
+                                    <strong>Independent ratings</strong>: Each emotion is rated separately
                                 </li>
                                 <li>
-                                    <strong>Visual feedback</strong>: Used ranks are highlighted in the summary below
+                                    <strong>Same ratings allowed</strong>: Multiple emotions can have identical ratings
                                 </li>
                             </ul>
                         </div>
                         <div class="col-md-6">
-                            <h6>Ranking Tips:</h6>
+                            <h6>Rating Tips:</h6>
                             <ul class="small">
                                 <li class="mb-2">
-                                    <i class="fas fa-eye text-primary me-1"></i> Focus on overall facial expression, not just one feature
+                                    <i class="fas fa-eye text-primary me-1"></i> Consider the overall facial expression and subtle cues
                                 </li>
                                 <li class="mb-2">
-                                    <i class="fas fa-sync-alt text-primary me-1"></i> You can adjust multiple times until you're satisfied
+                                    <i class="fas fa-balance-scale text-primary me-1"></i> Rate based on how clearly the emotion is expressed
                                 </li>
                                 <li class="mb-2">
-                                    <i class="fas fa-balance-scale text-primary me-1"></i> Compare emotions relative to each other
+                                    <i class="fas fa-sync-alt text-primary me-1"></i> You can adjust ratings as many times as needed
+                                </li>
+                                <li class="mb-2">
+                                    <i class="fas fa-th text-primary me-1"></i> It's okay to give the same rating to different emotions
                                 </li>
                                 <li>
-                                    <i class="fas fa-check-double text-primary me-1"></i> All ranks must be assigned before submitting
+                                    <i class="fas fa-check-double text-primary me-1"></i> All emotions must be rated before submitting
                                 </li>
                             </ul>
                         </div>
@@ -286,196 +358,174 @@
         </div>
     </div>
 </div>
-
-<!-- Modal for Ranking Validation -->
-<div class="modal fade" id="rankingModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header bg-warning">
-                <h5 class="modal-title">
-                    <i class="fas fa-exclamation-triangle me-2"></i> Ranking Validation
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <p id="modalMessage"></p>
-                <div class="alert alert-info small">
-                    <i class="fas fa-info-circle me-2"></i>
-                    Remember: Each number from 1 to {{ emotions.count }} must be used exactly once.
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Review Rankings</button>
-            </div>
-        </div>
-    </div>
-</div>
 {% endblock %}
 
 {% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const form = document.getElementById('rankingForm');
+    const form = document.getElementById('agreementForm');
     const validationCheck = document.getElementById('validationCheck');
     const validationAlert = document.getElementById('validationAlert');
-    const validRanksAlert = document.getElementById('validRanksAlert');
     const validationMessage = document.getElementById('validationMessage');
-    const sliders = document.querySelectorAll('.emotion-slider');
-    const hiddenInputs = document.querySelectorAll('.rank-value-input');
-    const modal = new bootstrap.Modal(document.getElementById('rankingModal'));
-    const modalMessage = document.getElementById('modalMessage');
+    const sliders = document.querySelectorAll('.agreement-slider');
+    const inputs = document.querySelectorAll('.agreement-input');
     const submitBtn = document.getElementById('submitBtn');
-    const ranksContainer = document.getElementById('ranksContainer');
     
-    // Initialize rank mapping
-    let rankMap = new Map(); // key: rank number, value: {emotionId, emotionName}
-    let emotionMap = new Map(); // key: emotionId, value: {rank, slider, hiddenInput}
+    // Initialize all emotions with default value
+    initializeEmotions();
     
-    // Initialize data structures
-    sliders.forEach(slider => {
-        const emotionId = slider.dataset.emotionId;
-        const emotionName = slider.dataset.emotionName;
-        const currentRank = parseInt(slider.value);
-        const hiddenInput = document.querySelector(`input[name="emotion_${emotionId}"]`);
-        
-        emotionMap.set(emotionId, {
-            rank: currentRank,
-            slider: slider,
-            hiddenInput: hiddenInput,
-            name: emotionName
-        });
-        
-        rankMap.set(currentRank, {
-            emotionId: emotionId,
-            emotionName: emotionName
-        });
-        
-        // Update visual display for this emotion
-        updateEmotionDisplay(emotionId, currentRank);
-    });
-    
-    // Update rank visualization
-    updateRankVisualization();
+    // Update statistics on load
+    updateStatistics();
     
     // Slider change handler
     sliders.forEach(slider => {
         slider.addEventListener('input', function() {
             const emotionId = this.dataset.emotionId;
-            const newRank = parseInt(this.value);
-            const oldRank = emotionMap.get(emotionId).rank;
+            const value = parseFloat(this.value);
             
-            // Check if new rank is already taken
-            if (rankMap.has(newRank) && rankMap.get(newRank).emotionId !== emotionId) {
-                // Swap ranks with the emotion that currently has this rank
-                const otherEmotionId = rankMap.get(newRank).emotionId;
-                const otherEmotion = emotionMap.get(otherEmotionId);
-                
-                // Update other emotion to old rank
-                otherEmotion.rank = oldRank;
-                otherEmotion.slider.value = oldRank;
-                otherEmotion.hiddenInput.value = oldRank;
-                rankMap.set(oldRank, {
-                    emotionId: otherEmotionId,
-                    emotionName: otherEmotion.name
-                });
-                
-                // Update other emotion display
-                updateEmotionDisplay(otherEmotionId, oldRank);
+            // Update corresponding input
+            const input = document.querySelector(`input[name="emotion_${emotionId}"]`);
+            if (input) {
+                input.value = value.toFixed(2);
+                updateEmotionDisplay(emotionId, value);
             }
             
-            // Update current emotion
-            emotionMap.get(emotionId).rank = newRank;
-            emotionMap.get(emotionId).hiddenInput.value = newRank;
-            rankMap.set(newRank, {
-                emotionId: emotionId,
-                emotionName: emotionMap.get(emotionId).name
-            });
-            
-            // Update display
-            updateEmotionDisplay(emotionId, newRank);
-            updateRankVisualization();
-            validateRanks();
+            updateStatistics();
         });
     });
     
-    // Update emotion display (badge, etc.)
-    function updateEmotionDisplay(emotionId, rank) {
-        const emotionCard = document.querySelector(`[data-emotion-id="${emotionId}"]`);
-        const rankBadge = emotionCard.querySelector('.rank-number');
-        
-        // Update badge
-        rankBadge.textContent = rank;
-        
-        // Update badge color based on rank position
-        const totalEmotions = sliders.length;
-        const rankPercent = (rank - 1) / (totalEmotions - 1);
-        
-        if (rankPercent < 0.33) {
-            rankBadge.className = 'badge bg-success rank-number';
-        } else if (rankPercent < 0.66) {
-            rankBadge.className = 'badge bg-warning rank-number';
-        } else {
-            rankBadge.className = 'badge bg-secondary rank-number';
-        }
-    }
-    
-    // Update rank visualization
-    function updateRankVisualization() {
-        const rankPills = ranksContainer.querySelectorAll('.rank-pill');
-        
-        rankPills.forEach(pill => {
-            const rank = parseInt(pill.dataset.rank);
-            const badge = pill.querySelector('.rank-badge');
-            const emotionNameSpan = pill.querySelector('.rank-emotion-name');
+    // Input change handler
+    inputs.forEach(input => {
+        input.addEventListener('change', function() {
+            let value = parseFloat(this.value);
             
-            if (rankMap.has(rank)) {
-                const emotionInfo = rankMap.get(rank);
-                badge.className = 'badge bg-primary rank-badge';
-                emotionNameSpan.textContent = emotionInfo.emotionName;
-                emotionNameSpan.className = 'rank-emotion-name small mt-1 text-center';
-            } else {
-                badge.className = 'badge bg-light text-dark rank-badge';
-                emotionNameSpan.textContent = 'Empty';
-                emotionNameSpan.className = 'rank-emotion-name small mt-1 text-center text-muted';
+            // Validate range
+            if (isNaN(value)) value = 0.5;
+            if (value < 0) value = 0;
+            if (value > 1) value = 1;
+            
+            this.value = value.toFixed(2);
+            
+            const emotionId = this.dataset.emotionId;
+            
+            // Update corresponding slider
+            const slider = document.querySelector(`.agreement-slider[data-emotion-id="${emotionId}"]`);
+            if (slider) {
+                slider.value = value;
+                updateEmotionDisplay(emotionId, value);
             }
+            
+            updateStatistics();
+        });
+        
+        input.addEventListener('input', function() {
+            // Real-time validation while typing
+            let value = parseFloat(this.value);
+            if (!isNaN(value)) {
+                if (value < 0) this.value = '0';
+                if (value > 1) this.value = '1';
+            }
+        });
+    });
+    
+    function initializeEmotions() {
+        sliders.forEach(slider => {
+            const emotionId = slider.dataset.emotionId;
+            const value = parseFloat(slider.value);
+            updateEmotionDisplay(emotionId, value);
         });
     }
     
-    // Validate ranks
-    function validateRanks() {
-        const usedRanks = new Set();
-        const missingRanks = [];
+    function updateEmotionDisplay(emotionId, value) {
+        const emotionCard = document.querySelector(`[data-emotion-id="${emotionId}"]`);
+        const badge = emotionCard.querySelector('.agreement-value');
+        const numberSpan = emotionCard.querySelector('.agreement-number');
         
-        // Check all emotions have unique ranks
-        for (let i = 1; i <= sliders.length; i++) {
-            if (rankMap.has(i)) {
-                usedRanks.add(i);
-            } else {
-                missingRanks.push(i);
-            }
-        }
+        // Update badge text
+        numberSpan.textContent = value.toFixed(2);
         
-        const isValid = usedRanks.size === sliders.length && missingRanks.length === 0;
-        
-        // Show/hide validation alerts
-        if (isValid) {
-            validationAlert.style.display = 'none';
-            validRanksAlert.style.display = 'block';
-            submitBtn.disabled = false;
-            submitBtn.classList.remove('btn-secondary');
-            submitBtn.classList.add('btn-primary');
+        // Update badge color based on value
+        if (value < 0.33) {
+            badge.className = 'badge bg-danger agreement-value';
+        } else if (value < 0.67) {
+            badge.className = 'badge bg-warning agreement-value';
         } else {
-            validRanksAlert.style.display = 'none';
+            badge.className = 'badge bg-success agreement-value';
+        }
+    }
+    
+    function updateStatistics() {
+        const values = [];
+        sliders.forEach(slider => {
+            values.push(parseFloat(slider.value));
+        });
+        
+        if (values.length > 0) {
+            // Calculate statistics
+            const sum = values.reduce((a, b) => a + b, 0);
+            const average = sum / values.length;
+            const highest = Math.max(...values);
+            const lowest = Math.min(...values);
             
-            if (missingRanks.length > 0) {
-                validationMessage.textContent = `Missing ranks: ${missingRanks.join(', ')}`;
-                validationAlert.style.display = 'block';
+            // Update display
+            document.getElementById('averageAgreement').textContent = average.toFixed(2);
+            document.getElementById('highestAgreement').textContent = highest.toFixed(2);
+            document.getElementById('lowestAgreement').textContent = lowest.toFixed(2);
+            
+            // Update distribution bars
+            updateDistributionBars(values);
+            
+            // Update distribution dots
+            updateDistributionDots(values);
+        }
+    }
+    
+    function updateDistributionBars(values) {
+        const low = values.filter(v => v < 0.34).length;
+        const medium = values.filter(v => v >= 0.34 && v < 0.67).length;
+        const high = values.filter(v => v >= 0.67).length;
+        const total = values.length;
+        
+        const lowPercent = (low / total) * 100;
+        const mediumPercent = (medium / total) * 100;
+        const highPercent = (high / total) * 100;
+        
+        document.getElementById('lowAgreementBar').style.width = `${lowPercent}%`;
+        document.getElementById('mediumAgreementBar').style.width = `${mediumPercent}%`;
+        document.getElementById('highAgreementBar').style.width = `${highPercent}%`;
+        
+        // Update tooltips
+        document.getElementById('lowAgreementBar').title = `Low (0.0-0.33): ${low} emotions`;
+        document.getElementById('mediumAgreementBar').title = `Medium (0.34-0.66): ${medium} emotions`;
+        document.getElementById('highAgreementBar').title = `High (0.67-1.00): ${high} emotions`;
+    }
+    
+    function updateDistributionDots(values) {
+        const container = document.getElementById('agreementDistribution');
+        container.innerHTML = '';
+        
+        // Sort values and create visual representation
+        const sortedValues = [...values].sort((a, b) => a - b);
+        sortedValues.forEach(value => {
+            const dot = document.createElement('div');
+            dot.style.width = '12px';
+            dot.style.height = '12px';
+            dot.style.borderRadius = '50%';
+            dot.style.display = 'inline-block';
+            dot.style.margin = '0 2px';
+            dot.style.cursor = 'pointer';
+            
+            if (value < 0.34) {
+                dot.style.backgroundColor = '#dc3545'; // Red for low
+            } else if (value < 0.67) {
+                dot.style.backgroundColor = '#ffc107'; // Yellow for medium
+            } else {
+                dot.style.backgroundColor = '#198754'; // Green for high
             }
             
-            submitBtn.disabled = false; // Still allow submission, but warn
-        }
-        
-        return isValid;
+            dot.title = `Rating: ${value.toFixed(2)}`;
+            container.appendChild(dot);
+        });
     }
     
     // Form submission validation
@@ -485,17 +535,24 @@ document.addEventListener('DOMContentLoaded', function() {
         // Check confirmation
         if (!validationCheck.checked) {
             validationCheck.classList.add('is-invalid');
-            modalMessage.textContent = 'Please confirm that you have ranked all emotional states appropriately.';
-            modal.show();
+            showValidationAlert('Please confirm that you have rated all emotional states appropriately.');
             return;
         }
         
-        // Validate ranks
-        const validation = validateRanks();
+        // Validate all inputs have values
+        let allValid = true;
+        inputs.forEach(input => {
+            const value = parseFloat(input.value);
+            if (isNaN(value) || value < 0 || value > 1) {
+                input.classList.add('is-invalid');
+                allValid = false;
+            } else {
+                input.classList.remove('is-invalid');
+            }
+        });
         
-        if (!validation) {
-            modalMessage.textContent = 'Please ensure all ranks are properly assigned before submitting.';
-            modal.show();
+        if (!allValid) {
+            showValidationAlert('Please ensure all ratings are valid numbers between 0 and 1.');
             return;
         }
         
@@ -503,9 +560,22 @@ document.addEventListener('DOMContentLoaded', function() {
         this.submit();
     });
     
+    function showValidationAlert(message) {
+        validationMessage.textContent = message;
+        validationAlert.style.display = 'block';
+        validationAlert.scrollIntoView({ behavior: 'smooth' });
+    }
+    
     // Clear validation on checkbox change
     validationCheck.addEventListener('change', function() {
         this.classList.remove('is-invalid');
+        validationAlert.style.display = 'none';
+    });
+    
+    // Initialize tooltips
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-toggle="tooltip"]'));
+    const tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
     });
     
     // Keyboard shortcuts
@@ -516,39 +586,29 @@ document.addEventListener('DOMContentLoaded', function() {
             form.dispatchEvent(new Event('submit'));
         }
     });
-    
-    // Initial validation
-    validateRanks();
 });
-
-// Custom template filter for range (if not already defined)
-if (typeof window.getRange === 'undefined') {
-    window.getRange = function(n) {
-        return Array.from({length: n}, (_, i) => i + 1);
-    };
-}
 </script>
 
 <style>
-/* Slider Styles */
-.emotion-slider-card {
+/* Agreement Slider Styles */
+.emotion-agreement-card {
     background-color: #f8f9fa;
     transition: all 0.3s ease;
     border-left: 4px solid #4e73df !important;
 }
 
-.emotion-slider-card:hover {
+.emotion-agreement-card:hover {
     background-color: #e9ecef;
     transform: translateY(-2px);
     box-shadow: 0 4px 6px rgba(0,0,0,0.1);
 }
 
-.form-range.emotion-slider {
+.form-range.agreement-slider {
     height: 8px;
     cursor: pointer;
 }
 
-.form-range.emotion-slider::-webkit-slider-thumb {
+.form-range.agreement-slider::-webkit-slider-thumb {
     background-color: #4e73df;
     border: 2px solid #fff;
     width: 20px;
@@ -556,7 +616,7 @@ if (typeof window.getRange === 'undefined') {
     box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
 
-.form-range.emotion-slider::-moz-range-thumb {
+.form-range.agreement-slider::-moz-range-thumb {
     background-color: #4e73df;
     border: 2px solid #fff;
     width: 20px;
@@ -564,59 +624,32 @@ if (typeof window.getRange === 'undefined') {
     box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
 
-.form-range.emotion-slider::-webkit-slider-runnable-track {
-    background: linear-gradient(to right, #4e73df, #f8f9fa);
+.form-range.agreement-slider::-webkit-slider-runnable-track {
+    background: linear-gradient(to right, #dc3545, #ffc107, #198754);
     height: 8px;
     border-radius: 4px;
 }
 
-.form-range.emotion-slider::-moz-range-track {
-    background: linear-gradient(to right, #4e73df, #f8f9fa);
+.form-range.agreement-slider::-moz-range-track {
+    background: linear-gradient(to right, #dc3545, #ffc107, #198754);
     height: 8px;
     border-radius: 4px;
 }
 
-/* Rank Visualization */
-.rank-pill {
-    display: inline-flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 0.5rem;
-    border-radius: 8px;
-    min-width: 60px;
-    transition: all 0.3s ease;
+/* Agreement Input Styles */
+.agreement-input {
+    text-align: center;
+    font-weight: bold;
 }
 
-.rank-pill:hover {
-    transform: scale(1.05);
+.agreement-input:focus {
+    border-color: #4e73df;
+    box-shadow: 0 0 0 0.25rem rgba(78, 115, 223, 0.25);
 }
 
-.rank-badge {
+.agreement-value {
     font-size: 0.9rem;
-    padding: 0.5rem 0.75rem;
-    border-radius: 50%;
-    width: 40px;
-    height: 40px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.rank-emotion-name {
-    max-width: 80px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-/* Rank Display */
-.rank-value-badge {
-    margin-bottom: 0.5rem;
-}
-
-.rank-number {
-    font-size: 1.2rem;
-    min-width: 40px;
+    min-width: 60px;
     display: inline-block;
     transition: all 0.3s ease;
 }
@@ -631,62 +664,80 @@ if (typeof window.getRange === 'undefined') {
     100% { background-position: 0 0; }
 }
 
+/* Distribution Chart */
+.agreement-distribution-chart .progress {
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.agreement-distribution-chart .progress-bar {
+    transition: width 0.5s ease;
+}
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
-    .emotion-slider-card {
+    .emotion-agreement-card {
         padding: 1rem !important;
     }
     
-    .emotion-slider-card .row > div {
+    .emotion-agreement-card .row > div {
         margin-bottom: 0.5rem;
-    }
-    
-    .rank-pill {
-        min-width: 50px;
-    }
-    
-    .rank-badge {
-        width: 35px;
-        height: 35px;
-        font-size: 0.8rem;
     }
     
     .btn-lg {
         width: 100%;
         margin-top: 1rem;
     }
+    
+    .agreement-legend {
+        font-size: 0.8rem;
+    }
 }
 
-/* Custom scrollbar for sliders container */
-.emotion-sliders-container {
+/* Custom scrollbar for agreement container */
+.emotion-agreement-container {
     max-height: 500px;
     overflow-y: auto;
     padding-right: 5px;
 }
 
-.emotion-sliders-container::-webkit-scrollbar {
+.emotion-agreement-container::-webkit-scrollbar {
     width: 8px;
 }
 
-.emotion-sliders-container::-webkit-scrollbar-track {
+.emotion-agreement-container::-webkit-scrollbar-track {
     background: #f1f1f1;
     border-radius: 4px;
 }
 
-.emotion-sliders-container::-webkit-scrollbar-thumb {
+.emotion-agreement-container::-webkit-scrollbar-thumb {
     background: #c1c1c1;
     border-radius: 4px;
 }
 
-.emotion-sliders-container::-webkit-scrollbar-thumb:hover {
+.emotion-agreement-container::-webkit-scrollbar-thumb:hover {
     background: #a8a8a8;
 }
 
-/* Used ranks visualization */
-.used-ranks-visualization {
-    padding: 1rem;
+/* Input group adjustments */
+.input-group-text {
+    background-color: #e9ecef;
+    color: #495057;
+    font-size: 0.875rem;
+}
+
+/* Stats panel */
+.agreement-stats {
     background-color: #f8f9fa;
+    padding: 1rem;
     border-radius: 8px;
+    border: 1px solid #dee2e6;
+}
+
+.agreement-stats h6 {
+    color: #495057;
+    border-bottom: 1px solid #dee2e6;
+    padding-bottom: 0.5rem;
 }
 </style>
 {% endblock %}
