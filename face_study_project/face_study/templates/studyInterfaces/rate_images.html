@@ -119,9 +119,9 @@
                             <!-- Agreement Legend -->
                             <div class="agreement-legend mb-3">
                                 <div class="d-flex justify-content-between small text-muted">
-                                    <span><i class="fas fa-times-circle me-1"></i> Completely Disagree (0)</span>
+                                    <span><i class="fas fa-times-circle me-1"></i> I don't perceive this emotion at all (0)</span>
                                     <span>Adjust sliders independently</span>
-                                    <span>Completely Agree (1) <i class="fas fa-check-circle ms-1"></i></span>
+                                    <span>This emotion is very clearly expressed (1) <i class="fas fa-check-circle ms-1"></i></span>
                                 </div>
                             </div>
                         </div>
@@ -263,15 +263,6 @@
                                         <i class="fas fa-exclamation-triangle me-2"></i>
                                         <span id="validationMessage"></span>
                                     </div>
-                                    <div class="form-check mb-3">
-                                        <input class="form-check-input" type="checkbox" id="validationCheck" required>
-                                        <label class="form-check-label" for="validationCheck">
-                                            I confirm that I have rated all emotional states appropriately
-                                        </label>
-                                        <div class="invalid-feedback">
-                                            Please confirm your ratings before proceeding.
-                                        </div>
-                                    </div>
                                 </div>
                                 <div class="col-md-4 text-end">
                                     <button type="submit" class="btn btn-primary btn-lg px-5" id="submitBtn">
@@ -364,7 +355,6 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('agreementForm');
-    const validationCheck = document.getElementById('validationCheck');
     const validationAlert = document.getElementById('validationAlert');
     const validationMessage = document.getElementById('validationMessage');
     const sliders = document.querySelectorAll('.agreement-slider');
@@ -531,14 +521,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Form submission validation
     form.addEventListener('submit', function(e) {
         e.preventDefault();
-        
-        // Check confirmation
-        if (!validationCheck.checked) {
-            validationCheck.classList.add('is-invalid');
-            showValidationAlert('Please confirm that you have rated all emotional states appropriately.');
-            return;
-        }
-        
+                
         // Validate all inputs have values
         let allValid = true;
         inputs.forEach(input => {
@@ -566,12 +549,6 @@ document.addEventListener('DOMContentLoaded', function() {
         validationAlert.scrollIntoView({ behavior: 'smooth' });
     }
     
-    // Clear validation on checkbox change
-    validationCheck.addEventListener('change', function() {
-        this.classList.remove('is-invalid');
-        validationAlert.style.display = 'none';
-    });
-    
     // Initialize tooltips
     const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-toggle="tooltip"]'));
     const tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
@@ -582,7 +559,6 @@ document.addEventListener('DOMContentLoaded', function() {
     document.addEventListener('keydown', function(e) {
         // Ctrl + Enter to submit
         if (e.ctrlKey && e.key === 'Enter') {
-            validationCheck.checked = true;
             form.dispatchEvent(new Event('submit'));
         }
     });

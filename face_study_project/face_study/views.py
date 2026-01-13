@@ -151,7 +151,7 @@ def rate_images(request):
                 participant.completed_sessions += 1
                 participant.save()
                 request.session['session_active'] = False
-                return redirect('session_complete')
+                return redirect('faceStudy:session_complete')
             
             return redirect('faceStudy:rate_images')
     
@@ -163,7 +163,7 @@ def rate_images(request):
         participant.completed_sessions += 1
         participant.save()
         request.session['session_active'] = False
-        return redirect('session_complete')
+        return redirect('faceStudy:session_complete')
     
     # Busca a próxima imagem disponível
     current_image = FaceImage.objects.annotate(
