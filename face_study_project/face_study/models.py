@@ -66,11 +66,20 @@ class FaceImage(models.Model):
 class Participant(models.Model):
     email = models.EmailField(unique=True)
     created_at = models.DateTimeField(auto_now_add=True)
-    completed_sessions = models.IntegerField(default=0)
+    # Removemos completed_sessions pois agora pode fazer múltiplas sessões
+    last_session_at = models.DateTimeField(null=True, blank=True)
+    
+    def total_ratings_count(self):
+        """Retorna o total de avaliações deste participante"""
+        return self.ratings.count()
+    
+    def rated_images_count(self):
+        """Retorna quantas imagens únicas este participante avaliou"""
+        return self.ratings.values('image').distinct().count()
     
     def __str__(self):
-        return self.email
-
+        return f"{self.email} ({self.ratings.count()} ratings)"
+    
 class ImageRating(models.Model):
     participant = models.ForeignKey(Participant, on_delete=models.CASCADE, related_name='ratings')
     image = models.ForeignKey(FaceImage, on_delete=models.CASCADE, related_name='ratings')

@@ -1,7 +1,6 @@
 from django import forms
-from django.core.exceptions import ValidationError
-from .models import EmotionalState, FaceImage, StudyConfiguration
-from django.core.validators import EmailValidator
+from .models import FaceImage, StudyConfiguration
+from django.core.validators import FileExtensionValidator
 
 class ParticipantEmailForm(forms.Form):
     email = forms.EmailField(

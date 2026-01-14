@@ -1,5 +1,6 @@
 from django.contrib import admin
 from django.utils.html import format_html
+from django.http import HttpResponseRedirect
 from .models import *
 
 @admin.register(FaceImage)
@@ -73,13 +74,41 @@ class FaceImageAdmin(admin.ModelAdmin):
 
 @admin.register(Participant)
 class ParticipantAdmin(admin.ModelAdmin):
-    list_display = ['email', 'created_at', 'completed_sessions', 'total_ratings']
+    list_display = ['email', 'created_at', 'last_session_at', 'total_ratings', 'unique_images_rated']
     search_fields = ['email']
-    readonly_fields = ['created_at']
+    readonly_fields = ['created_at', 'last_session_at', 'total_ratings_display', 'unique_images_display']
+    list_filter = ['created_at', 'last_session_at']
     
     def total_ratings(self, obj):
         return obj.ratings.count()
     total_ratings.short_description = 'Total Ratings'
+    
+    def unique_images_rated(self, obj):
+        return obj.ratings.values('image').distinct().count()
+    unique_images_rated.short_description = 'Unique Images'
+    
+    def total_ratings_display(self, obj):
+        return obj.total_ratings_count()
+    total_ratings_display.short_description = 'Total Ratings'
+    
+    def unique_images_display(self, obj):
+        return obj.rated_images_count()
+    unique_images_display.short_description = 'Unique Images Rated'
+    
+    # Adicionar ação para ver detalhes das avaliações
+    actions = ['view_ratings_details']
+    
+    def view_ratings_details(self, request, queryset):
+        if queryset.count() != 1:
+            self.message_user(request, 'Please select exactly one participant.', level='error')
+            return
+        
+        participant = queryset.first()
+        # Redirecionar para uma view de detalhes (você pode criar depois)
+        from django.urls import reverse
+        url = reverse('admin:face_study_imagerating_changelist') + f'?participant__id__exact={participant.id}'
+        return HttpResponseRedirect(url)
+    view_ratings_details.short_description = 'View ratings details'
 
 @admin.register(ImageRating)
 class ImageRatingAdmin(admin.ModelAdmin):

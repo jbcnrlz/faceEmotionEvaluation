@@ -1,3 +1,4 @@
+from django.utils import timezone
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse, JsonResponse, Http404
 from django.contrib import messages
@@ -36,15 +37,12 @@ def start_session(request):
         if form.is_valid():
             email = form.cleaned_data['email']
             
-            # Verifica se usuário já completou uma sessão
+            # Cria ou obtém o participante
             participant, created = Participant.objects.get_or_create(email=email)
             
-            if participant.completed_sessions > 0:
-                messages.warning(request, 'Este e-mail já participou do estudo.')
-                return render(request, 'studyInterfaces/start_session.html', {
-                    'form': form,
-                    'study_config': StudyConfiguration.objects.filter(is_active=True).first()
-                })
+            # Atualiza o timestamp da última sessão
+            participant.last_session_at = timezone.now()
+            participant.save()
             
             # Obtém configuração ativa
             config = StudyConfiguration.objects.filter(is_active=True).first()
@@ -57,13 +55,14 @@ def start_session(request):
                 config.max_images_per_session
             )
             
-            # Inicia sessão com número aleatório de imagens
+            # Inicia sessão
             request.session['participant_email'] = email
             request.session['session_active'] = True
-            request.session['rated_images'] = []
+            request.session['rated_images'] = []  # Imagens avaliadas nesta sessão
             request.session['session_image_count'] = images_for_this_session
             request.session['session_min_images'] = config.min_images_per_session
             request.session['session_max_images'] = config.max_images_per_session
+            request.session['participant_id'] = str(participant.id)  # Armazena ID do participante
             
             return redirect('faceStudy:rate_images')
     else:
@@ -85,10 +84,16 @@ def rate_images(request):
         return redirect('faceStudy:start_session')
     
     email = request.session.get('participant_email')
-    if not email:
+    participant_id = request.session.get('participant_id')
+    
+    if not email or not participant_id:
         return redirect('faceStudy:start_session')
     
-    participant = get_object_or_404(Participant, email=email)
+    try:
+        participant = Participant.objects.get(id=participant_id, email=email)
+    except Participant.DoesNotExist:
+        # Se não encontrar, redireciona para começar nova sessão
+        return redirect('faceStudy:start_session')
     
     # Obtém configuração ativa
     config = StudyConfiguration.objects.filter(is_active=True).first()
@@ -106,97 +111,139 @@ def rate_images(request):
         image = get_object_or_404(FaceImage, id=image_id)
         
         with transaction.atomic():
-            # Cria avaliação
-            rating = ImageRating.objects.create(
+            # Verifica se o participante já avaliou esta imagem
+            existing_rating = ImageRating.objects.filter(
                 participant=participant,
                 image=image
-            )
+            ).first()
             
-            # Processa níveis de concordância
-            for emotion in emotions:
-                agreement_key = f'emotion_{emotion.id}'
-                agreement_value = request.POST.get(agreement_key)
-                if agreement_value:
-                    # Converte para Decimal e valida
-                    try:
-                        agreement_decimal = Decimal(agreement_value)
-                        if agreement_decimal < Decimal('0.00'):
-                            agreement_decimal = Decimal('0.00')
-                        elif agreement_decimal > Decimal('1.00'):
-                            agreement_decimal = Decimal('1.00')
-                        
-                        # Arredonda para 2 casas decimais
-                        agreement_decimal = agreement_decimal.quantize(Decimal('0.01'))
-                        
-                        EmotionRanking.objects.create(
-                            rating=rating,
-                            emotion=emotion,
-                            agreement_level=agreement_decimal
-                        )
-                    except:
-                        # Se houver erro, use um valor padrão
-                        EmotionRanking.objects.create(
-                            rating=rating,
-                            emotion=emotion,
-                            agreement_level=Decimal('0.50')
-                        )
-            
-            # Atualiza sessão
-            rated = request.session.get('rated_images', [])
-            rated.append(str(image.id))
-            request.session['rated_images'] = rated
-            
-            # Verifica se completou a sessão
-            if len(rated) >= session_image_count:
-                participant.completed_sessions += 1
-                participant.save()
-                request.session['session_active'] = False
-                return redirect('faceStudy:session_complete')
-            
-            return redirect('faceStudy:rate_images')
+            if existing_rating:
+                # Se já avaliou, atualiza os rankings
+                # Remove rankings antigos
+                existing_rating.emotion_rankings.all().delete()
+                
+                # Adiciona novos rankings
+                for emotion in emotions:
+                    agreement_key = f'emotion_{emotion.id}'
+                    agreement_value = request.POST.get(agreement_key)
+                    if agreement_value:
+                        try:
+                            agreement_decimal = Decimal(agreement_value)
+                            if agreement_decimal < Decimal('0.00'):
+                                agreement_decimal = Decimal('0.00')
+                            elif agreement_decimal > Decimal('1.00'):
+                                agreement_decimal = Decimal('1.00')
+                            
+                            agreement_decimal = agreement_decimal.quantize(Decimal('0.01'))
+                            
+                            EmotionRanking.objects.create(
+                                rating=existing_rating,
+                                emotion=emotion,
+                                agreement_level=agreement_decimal
+                            )
+                        except:
+                            pass
+            else:
+                # Se não avaliou, cria nova avaliação
+                rating = ImageRating.objects.create(
+                    participant=participant,
+                    image=image
+                )
+                
+                # Processa níveis de concordância
+                for emotion in emotions:
+                    agreement_key = f'emotion_{emotion.id}'
+                    agreement_value = request.POST.get(agreement_key)
+                    if agreement_value:
+                        try:
+                            agreement_decimal = Decimal(agreement_value)
+                            if agreement_decimal < Decimal('0.00'):
+                                agreement_decimal = Decimal('0.00')
+                            elif agreement_decimal > Decimal('1.00'):
+                                agreement_decimal = Decimal('1.00')
+                            
+                            agreement_decimal = agreement_decimal.quantize(Decimal('0.01'))
+                            
+                            EmotionRanking.objects.create(
+                                rating=rating,
+                                emotion=emotion,
+                                agreement_level=agreement_decimal
+                            )
+                        except:
+                            pass
+        
+        # Atualiza sessão
+        rated = request.session.get('rated_images', [])
+        rated.append(str(image.id))
+        request.session['rated_images'] = rated
+        
+        # Verifica se completou a sessão
+        if len(rated) >= session_image_count:
+            request.session['session_active'] = False
+            return redirect('faceStudy:session_complete')
+        
+        return redirect('faceStudy:rate_images')
     
     # Pega as imagens já avaliadas nesta sessão
-    rated_ids = request.session.get('rated_images', [])
+    rated_in_this_session = request.session.get('rated_images', [])
     
     # Se já avaliou todas as imagens da sessão
-    if len(rated_ids) >= session_image_count:
-        participant.completed_sessions += 1
-        participant.save()
+    if len(rated_in_this_session) >= session_image_count:
         request.session['session_active'] = False
         return redirect('faceStudy:session_complete')
     
-    # Busca a próxima imagem disponível
+    # Busca a próxima imagem disponível para este participante
+    # 1. Imagens que ainda não atingiram o limite máximo de avaliações
+    # 2. Exclui imagens que este participante já avaliou (em qualquer sessão)
+    # 3. Exclui imagens já avaliadas nesta sessão
+    
+    # Imagens que o participante já avaliou (em qualquer sessão)
+    already_rated_by_participant = ImageRating.objects.filter(
+        participant=participant
+    ).values_list('image_id', flat=True)
+    
+    # Busca próxima imagem
     current_image = FaceImage.objects.annotate(
         rating_count=Count('ratings')
     ).filter(
-        rating_count__lt=config.max_ratings_per_image
+        rating_count__lt=config.max_ratings_per_image  # Ainda não atingiu o limite
     ).exclude(
-        id__in=ImageRating.objects.filter(
-            participant=participant
-        ).values_list('image_id', flat=True)
+        id__in=already_rated_by_participant  # Exclui imagens já avaliadas pelo participante
     ).exclude(
-        id__in=[uuid.UUID(id) for id in rated_ids]
+        id__in=[uuid.UUID(id) for id in rated_in_this_session]  # Exclui imagens já avaliadas nesta sessão
     ).order_by('?').first()
     
     if not current_image:
-        # Não há mais imagens disponíveis
-        participant.completed_sessions += 1
-        participant.save()
+        # Não há mais imagens disponíveis para este participante
         request.session['session_active'] = False
         return redirect('faceStudy:session_complete')
+    
+    # Verifica se há uma avaliação anterior desta imagem por este participante
+    previous_rating = ImageRating.objects.filter(
+        participant=participant,
+        image=current_image
+    ).first()
     
     # Calcular estatísticas da imagem
     image_rating_count = current_image.ratings.count()
     image_rating_progress = (image_rating_count / config.max_ratings_per_image) * 100
     
-    # Cria o formulário de concordância
+    # Cria o formulário de concordância com valores anteriores se existirem
     form = EmotionAgreementForm(emotions=emotions)
+    
+    # Se houver avaliação anterior, preenche o formulário com esses valores
+    if previous_rating:
+        initial_data = {}
+        for ranking in previous_rating.emotion_rankings.all():
+            initial_data[f'emotion_{ranking.emotion.id}'] = str(ranking.agreement_level)
+        form = EmotionAgreementForm(emotions=emotions, initial=initial_data)
     
     return render(request, 'studyInterfaces/rate_images.html', {
         'image': current_image,
         'emotions': emotions,
         'form': form,
         'config': config,
+        'has_previous_rating': previous_rating is not None,
         'image_rating_info': {
             'current_count': image_rating_count,
             'max_allowed': config.max_ratings_per_image,
@@ -204,7 +251,7 @@ def rate_images(request):
             'remaining': config.max_ratings_per_image - image_rating_count
         },
         'progress': {
-            'current': len(rated_ids) + 1,
+            'current': len(rated_in_this_session) + 1,
             'total': session_image_count,
             'min_images': request.session.get('session_min_images', 1),
             'max_images': request.session.get('session_max_images', 10),
