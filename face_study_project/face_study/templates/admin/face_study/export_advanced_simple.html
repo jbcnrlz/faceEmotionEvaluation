@@ -1,0 +1,89 @@
+<!-- templates/admin/face_study/export_advanced_simple.html -->
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block content %}
+<div id="content-main">
+    <h1>{{ title }}</h1>
+    
+    <div class="module" style="max-width: 800px;">
+        <h2>Export Options</h2>
+        
+        <div style="margin: 20px 0;">
+            <a href="{% url 'admin:face_study_imagerating_changelist' %}" class="button">
+                Export from Image Ratings page
+            </a>
+            <p style="margin-top: 5px; color: #666;">
+                Go to Image Ratings, select items, and use the action dropdown to export.
+            </p>
+        </div>
+        
+        <form method="post">
+            {% csrf_token %}
+            
+            <fieldset class="module aligned">
+                <h3>Filter by Date</h3>
+                
+                <div class="form-row">
+                    <label for="start_date">Start Date:</label>
+                    <input type="date" name="start_date" id="start_date">
+                </div>
+                
+                <div class="form-row">
+                    <label for="end_date">End Date:</label>
+                    <input type="date" name="end_date" id="end_date">
+                </div>
+            </fieldset>
+            
+            <div class="submit-row">
+                <input type="submit" value="Export Filtered Data (CSV)" class="default">
+            </div>
+        </form>
+    </div>
+    
+    <div class="module" style="margin-top: 20px; max-width: 800px;">
+        <h2>Current Statistics</h2>
+        <table style="width: 100%;">
+            <tr>
+                <td><strong>Total Ratings:</strong></td>
+                <td>{{ total_ratings }}</td>
+            </tr>
+            <tr>
+                <td><strong>Total Images:</strong></td>
+                <td>{{ total_images }}</td>
+            </tr>
+            <tr>
+                <td><strong>Total Participants:</strong></td>
+                <td>{{ total_participants }}</td>
+            </tr>
+            <tr>
+                <td><strong>Emotions Tracked:</strong></td>
+                <td>{{ emotions.count }}</td>
+            </tr>
+        </table>
+    </div>
+    
+    <div class="module" style="margin-top: 20px; max-width: 800px;">
+        <h2>CSV Format Information</h2>
+        <p>The exported CSV will have:</p>
+        <ul>
+            <li>One row per image rating</li>
+            <li>One column for each emotion (e.g., emotion_happy, emotion_sad)</li>
+            <li>The last column contains the image URL</li>
+            <li>Columns: rating_id, participant_email, image_code, image_filename, rating_created_at, emotion_*, image_url</li>
+        </ul>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Set default dates
+    const today = new Date();
+    const oneMonthAgo = new Date();
+    oneMonthAgo.setMonth(today.getMonth() - 1);
+    
+    document.getElementById('start_date').valueAsDate = oneMonthAgo;
+    document.getElementById('end_date').valueAsDate = today;
+});
+</script>
+{% endblock %}

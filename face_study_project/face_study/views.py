@@ -13,6 +13,8 @@ import random
 from .models import *
 from .forms import *
 from django.db.models import Count
+from .export_utils import export_ratings_to_csv
+from django.contrib.admin.views.decorators import staff_member_required
 
 @login_required
 def upload_image(request):
@@ -326,3 +328,34 @@ def dashboard(request):
         'stats': stats,
         'recent_ratings': recent_ratings
     })
+
+@staff_member_required
+def export_advanced(request):
+    """
+    View simples para exportação avançada
+    """
+    from .models import ImageRating, FaceImage, Participant, EmotionalState
+    
+    if request.method == 'POST':
+        # Lógica de filtro básica
+        start_date = request.POST.get('start_date')
+        end_date = request.POST.get('end_date')
+        
+        queryset = ImageRating.objects.all()
+        
+        if start_date:
+            queryset = queryset.filter(created_at__gte=start_date)
+        if end_date:
+            queryset = queryset.filter(created_at__lte=end_date)
+        
+        return export_ratings_to_csv(queryset)
+    
+    context = {
+        'title': 'Advanced Export',
+        'total_ratings': ImageRating.objects.count(),
+        'total_images': FaceImage.objects.count(),
+        'total_participants': Participant.objects.count(),
+        'emotions': EmotionalState.objects.all(),
+    }
+    
+    return render(request, 'admin/face_study/export_advanced_simple.html', context)
