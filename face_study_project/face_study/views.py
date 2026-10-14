@@ -18,19 +18,48 @@ from django.contrib.admin.views.decorators import staff_member_required
 
 @login_required
 def upload_image(request):
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+
     if request.method == 'POST':
-        form = ImageUploadForm(request.POST, request.FILES)
+        form = MultipleImageUploadForm(request.POST, request.FILES)
         if form.is_valid():
-            image = form.save()
-            messages.success(request, f'Imagem enviada! Código: {image.code}')
+            created = 0
+            errors = list(form.invalid_images)
+
+            for uploaded in form.valid_images:
+                try:
+                    FaceImage.objects.create(image=uploaded)
+                    created += 1
+                except Exception as e:
+                    errors.append((uploaded.name, str(e)))
+
+            if is_ajax:
+                return JsonResponse({
+                    'created': created,
+                    'errors': [{'name': n, 'error': e} for n, e in errors]
+                })
+
+            if created:
+                messages.success(request, f'{created} imagem(ns) enviada(s) com sucesso!')
+            for name, error in errors[:10]:
+                messages.error(request, f'{name}: {error}')
+            if len(errors) > 10:
+                messages.error(request, f'... e mais {len(errors) - 10} arquivo(s) com erro.')
             return redirect('faceStudy:upload_image')
+
+        if is_ajax:
+            return JsonResponse({
+                'created': 0,
+                'errors': [{'name': '', 'error': ' '.join(m for msgs in form.errors.values() for m in msgs)}]
+            }, status=400)
     else:
-        form = ImageUploadForm()
+        form = MultipleImageUploadForm()
     
-    images = FaceImage.objects.all().order_by('-uploaded_at')
+    images = FaceImage.objects.all().order_by('-uploaded_at')[:50]
     return render(request, 'studyInterfaces/upload.html', {
         'form': form,
-        'images': images
+        'images': images,
+        'total_images': FaceImage.objects.count()
     })
 
 def start_session(request):

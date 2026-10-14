@@ -22,6 +22,58 @@ class ImageUploadForm(forms.ModelForm):
             })
         }
 
+class MultipleFileInput(forms.ClearableFileInput):
+    allow_multiple_selected = True
+
+
+class MultipleFileField(forms.FileField):
+    """Campo de arquivo que aceita vários arquivos e retorna uma lista."""
+
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault('widget', MultipleFileInput())
+        super().__init__(*args, **kwargs)
+
+    def clean(self, data, initial=None):
+        single_file_clean = super().clean
+        if isinstance(data, (list, tuple)):
+            if not data:
+                # Lista vazia: dispara o erro de campo obrigatório
+                return [single_file_clean(None, initial)]
+            return [single_file_clean(d, initial) for d in data]
+        return [single_file_clean(data, initial)]
+
+
+class MultipleImageUploadForm(forms.Form):
+    """
+    Upload de várias imagens de uma vez.
+
+    Cada arquivo é validado individualmente: os válidos ficam em
+    `valid_images` e os inválidos em `invalid_images` como (nome, erro).
+    """
+    images = MultipleFileField(
+        label='Imagens',
+        widget=MultipleFileInput(attrs={
+            'class': 'form-control',
+            'accept': 'image/*'
+        })
+    )
+
+    def clean_images(self):
+        files = self.cleaned_data['images']
+        image_field = forms.ImageField()
+        self.valid_images = []
+        self.invalid_images = []
+
+        for f in files:
+            try:
+                image_field.clean(f)
+                self.valid_images.append(f)
+            except forms.ValidationError as e:
+                self.invalid_images.append((f.name, ' '.join(e.messages)))
+
+        return files
+
+
 class EmotionAgreementForm(forms.Form):
     def __init__(self, *args, **kwargs):
         emotions = kwargs.pop('emotions', [])

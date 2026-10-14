@@ -5,20 +5,30 @@
     <div class="col-md-6">
         <div class="card">
             <div class="card-header">
-                <h4>Upload de Imagem</h4>
+                <h4>Upload de Imagens</h4>
             </div>
             <div class="card-body">
-                <form method="post" enctype="multipart/form-data">
+                <form method="post" enctype="multipart/form-data" id="upload-form">
                     {% csrf_token %}
                     <div class="mb-3">
-                        {{ form.image.label_tag }}
-                        {{ form.image }}
-                        {% if form.image.errors %}
-                            <div class="text-danger">{{ form.image.errors }}</div>
+                        {{ form.images.label_tag }}
+                        {{ form.images }}
+                        <div class="form-text">Selecione várias imagens de uma vez (Ctrl/Shift ou Ctrl+A na pasta).</div>
+                        <div class="form-text" id="selected-count"></div>
+                        {% if form.images.errors %}
+                            <div class="text-danger">{{ form.images.errors }}</div>
                         {% endif %}
                     </div>
-                    <button type="submit" class="btn btn-primary">Enviar Imagem</button>
+                    <button type="submit" class="btn btn-primary" id="upload-button">Enviar Imagens</button>
                 </form>
+
+                <div id="upload-progress" class="mt-3 d-none">
+                    <div class="progress">
+                        <div class="progress-bar" id="upload-progress-bar" role="progressbar" style="width: 0%">0%</div>
+                    </div>
+                    <div class="small text-muted mt-1" id="upload-status"></div>
+                </div>
+                <div id="upload-result" class="mt-3"></div>
             </div>
         </div>
     </div>
@@ -26,7 +36,10 @@
     <div class="col-md-6">
         <div class="card">
             <div class="card-header">
-                <h4>Imagens Enviadas</h4>
+                <h4>Imagens Enviadas ({{ total_images }})</h4>
+                {% if total_images > images|length %}
+                <small class="text-muted">Mostrando as {{ images|length }} mais recentes</small>
+                {% endif %}
             </div>
             <div class="card-body">
                 <table class="table">
@@ -57,4 +70,115 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    // Envia as imagens em lotes para evitar uma requisição gigante (ex.: 400 arquivos).
+    const BATCH_SIZE = 25;
+
+    const form = document.getElementById('upload-form');
+    const input = form.querySelector('input[type="file"]');
+    const button = document.getElementById('upload-button');
+    const counter = document.getElementById('selected-count');
+    const progressBox = document.getElementById('upload-progress');
+    const progressBar = document.getElementById('upload-progress-bar');
+    const statusEl = document.getElementById('upload-status');
+    const resultEl = document.getElementById('upload-result');
+    const csrfToken = form.querySelector('input[name="csrfmiddlewaretoken"]').value;
+
+    input.addEventListener('change', function () {
+        counter.textContent = input.files.length
+            ? input.files.length + ' arquivo(s) selecionado(s)'
+            : '';
+    });
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    function setProgress(done, total) {
+        const pct = total ? Math.round((done / total) * 100) : 0;
+        progressBar.style.width = pct + '%';
+        progressBar.textContent = pct + '%';
+        statusEl.textContent = done + ' de ' + total + ' processados';
+    }
+
+    async function sendBatch(files) {
+        const data = new FormData();
+        data.append('csrfmiddlewaretoken', csrfToken);
+        files.forEach(f => data.append('images', f, f.name));
+
+        try {
+            const response = await fetch(window.location.href, {
+                method: 'POST',
+                body: data,
+                headers: {'X-Requested-With': 'XMLHttpRequest'},
+                credentials: 'same-origin'
+            });
+            const json = await response.json();
+            return {
+                created: json.created || 0,
+                errors: json.errors || []
+            };
+        } catch (e) {
+            // Falha de rede/sessão expirada: marca o lote inteiro como erro.
+            return {
+                created: 0,
+                errors: files.map(f => ({
+                    name: f.name,
+                    error: 'Falha no envio (rede ou sessão expirada).'
+                }))
+            };
+        }
+    }
+
+    form.addEventListener('submit', async function (event) {
+        const files = Array.from(input.files);
+        if (!files.length) {
+            return; // deixa o servidor validar e mostrar o erro
+        }
+        event.preventDefault();
+
+        button.disabled = true;
+        input.disabled = true;
+        resultEl.innerHTML = '';
+        progressBox.classList.remove('d-none');
+        setProgress(0, files.length);
+
+        let created = 0;
+        let errors = [];
+        let done = 0;
+
+        for (let i = 0; i < files.length; i += BATCH_SIZE) {
+            const batch = files.slice(i, i + BATCH_SIZE);
+            const res = await sendBatch(batch);
+            created += res.created;
+            errors = errors.concat(res.errors);
+            done += batch.length;
+            setProgress(done, files.length);
+        }
+
+        let html = '<div class="alert alert-' + (errors.length ? 'warning' : 'success') + '">' +
+            '<strong>' + created + '</strong> de ' + files.length + ' imagem(ns) enviada(s) com sucesso.';
+        if (errors.length) {
+            html += '<br><strong>' + errors.length + '</strong> com erro:<ul class="mb-0">';
+            errors.forEach(e => {
+                html += '<li>' + escapeHtml(e.name) + ': ' + escapeHtml(e.error) + '</li>';
+            });
+            html += '</ul>';
+        }
+        html += '</div><a href="' + window.location.pathname + '" class="btn btn-outline-primary btn-sm">Atualizar lista</a>';
+        resultEl.innerHTML = html;
+
+        input.value = '';
+        counter.textContent = '';
+        input.disabled = false;
+        button.disabled = false;
+    });
+})();
+</script>
 {% endblock %}
